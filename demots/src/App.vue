@@ -30,7 +30,8 @@ const data = ref([
   { name: 'Bruce Lee', power: 9000 },
   { name: 'jackie chan', power: 7000 },
   { name: 'nima chan', power: 4000 },
-  { name: 'Jet li', power: 8000 }
+  { name: 'Jet li', power: 8000 },
+  { name: 'eackie chan', power: 7000 },
 ])
 
 const dataOrigin = [...data.value]
@@ -40,7 +41,7 @@ const sortNameKey = ref('')
 const sortPowerKey = ref('')
 
 const dataFilter = computed(() => {
-  if ((!sortNameKey.value.length) && (!sortPowerKey.value.length)) {
+  if ((!sortNameKey.value.length) && (!sortPowerKey.value.length) && (!searchKey.value.length)) {
     return dataOrigin;
   }
   return data.value.filter((value, index, ar) => {
