@@ -14,7 +14,6 @@
       </tr>
     </tbody>
   </table>
-  <!-- <GridView :header="['name', 'power']" :data="data" @sortname="sortbyName" @sortpower="sortbyPower"></GridView> -->
 </template>
 
 <script setup lang="ts">
@@ -23,7 +22,6 @@ import TodoItem from './components/items/TodoItem.vue';
 import { marked } from 'marked'
 import { debounce } from "lodash-es";
 import GitItem from './components/items/GitItem.vue';
-import GridView from './components/GridView.vue';
 
 const select = ref('main')
 const items = ref([]);
