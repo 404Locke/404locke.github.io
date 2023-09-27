@@ -2,7 +2,7 @@
   <div class="main">
     <div style="background-color: red;">
       <div>
-        <canvas>d</canvas>
+        <canvas ></canvas>
       </div>
       <div></div>
     </div>
