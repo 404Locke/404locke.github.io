@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>复利计算器</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .input-section {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group input[type="number"] {
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .input-group input[type="range"] {
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .chart-section {
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            min-height: 400px;
+        }
+
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+
+        .results p {
+            margin: 5px 0;
+            color: #333;
+        }
+
+        .results .highlight {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .results .highlight-small {
+            color: #28a745;
+            font-size: 0.9em;
+        }
+
+        .results .percentage {
+            color: #28a745;
+            font-weight: bold;
+            white-space: nowrap;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 400px) {
+            .results .percentage {
+                font-size: 0.8em;
+            }
+        }
+
+        .pie-container {
+            margin-top: 20px;
+            grid-template-columns: 1fr;
+        }
+
+        .pie-chart-section {
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            height: 400px;
+        }
+
+        .table-container {
+            margin-top: 20px;
+            display: block;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .table-section {
+            width: 100%;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: right;
+            margin: 0 auto;
+        }
+
+        th, td {
+            padding: 12px 20px;
+            border-bottom: 1px solid #eee;
+            white-space: nowrap;
+        }
+
+        th:nth-child(1) { min-width: 80px; }
+        th:nth-child(2) { min-width: 120px; }
+        th:nth-child(3) { min-width: 120px; }
+        th:nth-child(4) { min-width: 120px; }
+        th:nth-child(5) { min-width: 120px; }
+        th:nth-child(6) { min-width: 120px; }
+
+        th {
+            background: #f8f9fa;
+            text-align: right;
+            font-weight: 500;
+            color: #333;
+        }
+
+        th:first-child, td:first-child {
+            text-align: left;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .select-style {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            font-size: 14px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="input-section">
+            <div class="input-group">
+                <label for="principal">初始投资金额</label>
+                <input type="number" id="principal" value="10000" min="0" step="1000">
+                <input type="range" id="principal-range" value="10000" min="0" max="1000000" step="1000">
+            </div>
+            <div class="input-group">
+                <label for="rate">年化收益率 (%)</label>
+                <input type="number" id="rate" value="10" min="0" max="100" step="0.1">
+                <input type="range" id="rate-range" value="10" min="0" max="100" step="0.1">
+            </div>
+            <div class="input-group">
+                <label for="years">投资年限</label>
+                <input type="number" id="years" value="10" min="1" max="50">
+                <input type="range" id="years-range" value="10" min="1" max="50" step="1">
+            </div>
+            <div class="input-group">
+                <label for="contribution">每月追加投资</label>
+                <input type="number" id="contribution" value="1000" min="0" step="100">
+                <input type="range" id="contribution-range" value="1000" min="0" max="100000" step="100">
+            </div>
+            <div class="input-group">
+                <label for="compoundPeriod">复利周期</label>
+                <select id="compoundPeriod" class="select-style">
+                    <option value="yearly">按年复利</option>
+                    <option value="monthly">按月复利</option>
+                    <option value="daily">按天复利</option>
+                </select>
+            </div>
+            <button onclick="calculate()">计算</button>
+            <div class="results">
+                <p>总投资额: <span id="totalInvestment" class="highlight">0</span></p>
+                <p>最终金额: <span id="finalAmount" class="highlight">0</span><span class="percentage"> - <span id="finalPercentage">0%</span></span></p>
+                <p>投资收益: <span id="totalInterest" class="highlight">0</span><span class="percentage"> - <span id="interestPercentage">0%</span></span></p>
+            </div>
+        </div>
+        <div class="chart-section">
+            <canvas id="compoundChart"></canvas>
+        </div>
+    </div>
+
+    <div class="container pie-container">
+        <div class="pie-chart-section">
+            <canvas id="pieChart"></canvas>
+        </div>
+    </div>
+
+    <div class="container table-container">
+        <div class="table-section">
+            <table id="yearlyDetails">
+                <thead>
+                    <tr>
+                        <th>年度</th>
+                        <th>年初本金</th>
+                        <th>年度利息</th>
+                        <th>累计利息</th>
+                        <th>年末总额</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 将由JavaScript填充 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let chart = null;
+        let pieChart = null;
+
+        function formatMoney(number) {
+            return new Intl.NumberFormat('zh-CN', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+                useGrouping: true
+            }).format(number);
+        }
+
+        function calculate() {
+            const principal = parseFloat(document.getElementById('principal').value);
+            const rate = parseFloat(document.getElementById('rate').value) / 100;
+            const years = parseInt(document.getElementById('years').value);
+            const monthlyContribution = parseFloat(document.getElementById('contribution').value);
+            const compoundPeriod = document.getElementById('compoundPeriod').value;
+
+            let balance = principal;
+            const balanceData = [balance];
+            const contributionData = [principal];
+            
+            // 根据复利周期计算
+            if (compoundPeriod === 'yearly') {
+                // 按年复利
+                for (let year = 1; year <= years; year++) {
+                    // 先加入一年的追加投资
+                    balance = balance + monthlyContribution * 12;
+                    // 再计算年度利息
+                    balance = balance * (1 + rate);
+                    
+                    balanceData.push(balance);
+                    contributionData.push(principal + monthlyContribution * 12 * year);
+                }
+            } else if (compoundPeriod === 'monthly') {
+                // 按月复利
+                const monthlyRate = rate / 12;
+                const totalMonths = years * 12;
+                
+                for (let month = 1; month <= totalMonths; month++) {
+                    balance = balance + monthlyContribution;  // 先加入每月追加投资
+                    balance = balance * (1 + monthlyRate);    // 再计算利息
+                    
+                    if (month % 12 === 0) {
+                        balanceData.push(balance);
+                        contributionData.push(principal + monthlyContribution * month);
+                    }
+                }
+            } else {
+                // 按天复利
+                const dailyRate = rate / 365;
+                const totalDays = years * 365;
+                
+                for (let day = 1; day <= totalDays; day++) {
+                    // 每月初追加投资
+                    if (day % 30 === 1) {
+                        balance = balance + monthlyContribution;
+                    }
+                    balance = balance * (1 + dailyRate);
+                    
+                    if (day % 365 === 0) {
+                        balanceData.push(balance);
+                        contributionData.push(principal + monthlyContribution * 12 * Math.floor(day/365));
+                    }
+                }
+            }
+
+            const totalInvestment = principal + monthlyContribution * years * 12;
+            const totalInterest = balance - totalInvestment;
+            const interestPercentage = ((totalInterest / totalInvestment) * 100).toFixed(1);
+            const finalPercentage = ((balance / totalInvestment) * 100).toFixed(1);
+
+            document.getElementById('totalInvestment').textContent = formatMoney(totalInvestment);
+            document.getElementById('finalAmount').textContent = formatMoney(balance);
+            document.getElementById('finalPercentage').textContent = finalPercentage + '%';
+            document.getElementById('totalInterest').textContent = formatMoney(totalInterest);
+            document.getElementById('interestPercentage').textContent = interestPercentage + '%';
+
+            updateChart(balanceData, contributionData, years);
+            updatePieChart(totalInvestment, totalInterest);
+            updateYearlyTable(balanceData, contributionData);
+        }
+
+        function updateChart(balanceData, contributionData, years) {
+            const labels = Array.from({length: years + 1}, (_, i) => `第${i}年`);
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            const ctx = document.getElementById('compoundChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '账户总额',
+                        data: balanceData,
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        fill: true,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }, {
+                        label: '投资本金',
+                        data: contributionData,
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        fill: true,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + formatMoney(context.raw);
+                                }
+                            }
+                        },
+                        datalabels: {
+                            display: function(context) {
+                                if (context.datasetIndex === 0) {
+                                    return true;
+                                } else {
+                                    const index = context.dataIndex;
+                                    const data = context.dataset.data;
+                                    return index === 0 || (data[index] !== data[index - 1]);
+                                }
+                            },
+                            align: function(context) {
+                                return context.datasetIndex === 0 ? 'top' : 'bottom';
+                            },
+                            formatter: function(value) {
+                                return formatMoney(value);
+                            },
+                            color: function(context) {
+                                return context.datasetIndex === 0 ? '#28a745' : '#007bff';
+                            },
+                            font: {
+                                weight: 'bold',
+                                size: 11
+                            },
+                            offset: function(context) {
+                                return context.datasetIndex === 0 ? 8 : -8;
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return formatMoney(value);
+                                }
+                            }
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
+
+        function updatePieChart(totalInvestment, totalInterest) {
+            if (pieChart) {
+                pieChart.destroy();
+            }
+
+            const ctx = document.getElementById('pieChart').getContext('2d');
+            pieChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['投资本金', '投资收益'],
+                    datasets: [{
+                        data: [totalInvestment, totalInterest],
+                        backgroundColor: [
+                            '#007bff',  // 蓝色对应投资本金
+                            '#28a745'   // 绿色对应投资收益
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = formatMoney(context.raw);
+                                    const percentage = ((context.raw / (totalInvestment + totalInterest)) * 100).toFixed(1);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        },
+                        datalabels: {
+                            formatter: function(value, context) {
+                                const percentage = ((value / (totalInvestment + totalInterest)) * 100).toFixed(1);
+                                return `${context.chart.data.labels[context.dataIndex]}\n${percentage}%`;
+                            },
+                            color: '#fff',
+                            font: {
+                                weight: 'bold',
+                                size: 14
+                            }
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
+
+        function updateYearlyTable(balanceData, contributionData) {
+            const tbody = document.getElementById('yearlyDetails').getElementsByTagName('tbody')[0];
+            tbody.innerHTML = '';
+
+            let previousBalance = balanceData[0];
+            let accumulatedInterest = 0;
+
+            for(let i = 1; i < balanceData.length; i++) {
+                const balance = balanceData[i];
+                const yearlyContribution = contributionData[i] - contributionData[i-1];
+                const yearlyInterest = balance - previousBalance - yearlyContribution;
+                accumulatedInterest += yearlyInterest;
+
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>第${i}年</td>
+                    <td>${formatMoney(previousBalance)}</td>
+                    <td>${formatMoney(yearlyInterest)}</td>
+                    <td>${formatMoney(accumulatedInterest)}</td>
+                    <td>${formatMoney(balance)}</td>
+                `;
+
+                previousBalance = balance;
+            }
+        }
+
+        function setupRangeInputs() {
+            const inputs = [
+                { number: 'principal', range: 'principal-range' },
+                { number: 'rate', range: 'rate-range' },
+                { number: 'years', range: 'years-range' },
+                { number: 'contribution', range: 'contribution-range' }
+            ];
+
+            inputs.forEach(input => {
+                const numberInput = document.getElementById(input.number);
+                const rangeInput = document.getElementById(input.range);
+
+                numberInput.addEventListener('input', function() {
+                    rangeInput.value = this.value;
+                    calculate();
+                });
+
+                rangeInput.addEventListener('input', function() {
+                    numberInput.value = this.value;
+                    calculate();
+                });
+            });
+        }
+
+        function setupEventListeners() {
+            // 现有的range输入监听保持不变
+            setupRangeInputs();
+            
+            // 添加复利周期选择的监听
+            document.getElementById('compoundPeriod').addEventListener('change', calculate);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            calculate();
+        });
+    </script>
+</body>
+</html> 
