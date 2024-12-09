@@ -115,13 +115,12 @@
             opacity: 0.7;
         }
 
-        /* 修改按钮组样式 */
+        /* 修改按钮组样式以适配移动设备 */
         .button-group {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 10px;
             margin-bottom: 20px;
-            align-items: stretch;  /* 改为stretch使所有按钮高度一致 */
-            flex-wrap: wrap;
         }
 
         /* 统一按钮基础样式 */
@@ -158,6 +157,120 @@
         /* 应用基础样式到所有按钮 */
         .refresh-btn, .link-btn {
             composes: btn-base;
+        }
+
+        /* 调整表格在移动设备上的显示 */
+        @media screen and (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .market-table {
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch; /* 为 iOS 添加平滑滚动 */
+            }
+
+            .market-table th, 
+            .market-table td {
+                padding: 8px;
+                font-size: 14px;
+                white-space: nowrap;
+            }
+
+            /* 调整某些列的最小宽度 */
+            .market-table th:nth-child(1),
+            .market-table td:nth-child(1) {
+                min-width: 60px;  /* 排名列 */
+            }
+
+            .market-table th:nth-child(2),
+            .market-table td:nth-child(2) {
+                min-width: 180px; /* 名称列 */
+            }
+
+            .market-table th:nth-child(3),
+            .market-table td:nth-child(3) {
+                min-width: 100px; /* 价格列 */
+            }
+
+            .market-table th:nth-child(4),
+            .market-table td:nth-child(4) {
+                min-width: 90px;  /* 涨跌列 */
+            }
+
+            .market-table th:nth-child(5),
+            .market-table td:nth-child(5),
+            .market-table th:nth-child(6),
+            .market-table td:nth-child(6) {
+                min-width: 120px; /* 市值和成交量列 */
+            }
+
+            /* 调整按钮大小 */
+            .btn-base {
+                padding: 8px 12px;
+                min-width: unset;
+                width: 100%;
+                height: 36px;
+                font-size: 13px;
+            }
+
+            /* 调整图标大小 */
+            .market-table img {
+                width: 16px;
+                height: 16px;
+            }
+
+            /* 优化进度条 */
+            .progress-container {
+                height: 2px;
+            }
+        }
+
+        /* 针对更小屏幕的优化 */
+        @media screen and (max-width: 375px) {
+            body {
+                padding: 5px;
+            }
+
+            .button-group {
+                grid-template-columns: 1fr 1fr;  /* iPhone SE 等小屏设备显示两列按钮 */
+            }
+
+            .market-table th, 
+            .market-table td {
+                padding: 6px;
+                font-size: 13px;
+            }
+        }
+
+        /* 添加暗黑模式支持 */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #1a1a1a;
+                color: #fff;
+            }
+
+            .market-table {
+                background: #2d2d2d;
+                box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+            }
+
+            .market-table th {
+                background: #333;
+            }
+
+            .market-table td {
+                border-bottom-color: #404040;
+            }
+
+            .btn-base {
+                background: #404040;
+            }
+
+            .btn-base:hover {
+                background: #505050;
+            }
         }
     </style>
 </head>
