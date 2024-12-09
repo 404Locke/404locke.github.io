@@ -295,11 +295,29 @@
                         const currentQuarterContract = deliveryPriceData.find(item => item.symbol === currentQuarterSymbol);
                         const nextQuarterContract = deliveryPriceData.find(item => item.symbol === nextQuarterSymbol);
 
+                        // 如果找不到合约数据，跳过这个币种
+                        if (!currentQuarterContract || !nextQuarterContract) {
+                            console.log(`Skipping ${symbol}: Contract data not found`);
+                            continue;
+                        }
+
                         const currentQuarterVolume = deliveryVolumeData.find(item => item.symbol === currentQuarterSymbol);
                         const nextQuarterVolume = deliveryVolumeData.find(item => item.symbol === nextQuarterSymbol);
 
-                        const currentQuarterPrice = currentQuarterContract ? parseFloat(currentQuarterContract.price) : 0;
-                        const nextQuarterPrice = nextQuarterContract ? parseFloat(nextQuarterContract.price) : 0;
+                        // 如果找不到交易量数据，跳过这个币种
+                        if (!currentQuarterVolume || !nextQuarterVolume) {
+                            console.log(`Skipping ${symbol}: Volume data not found`);
+                            continue;
+                        }
+
+                        const currentQuarterPrice = parseFloat(currentQuarterContract.price);
+                        const nextQuarterPrice = parseFloat(nextQuarterContract.price);
+
+                        // 如果价格为0或无效，跳过这个币种
+                        if (!currentQuarterPrice || !nextQuarterPrice) {
+                            console.log(`Skipping ${symbol}: Invalid price data`);
+                            continue;
+                        }
 
                         // 修改显示行的部分，传入价格参数
                         const currentQuarterVolumeFormatted = formatVolume(currentQuarterVolume, symbol, currentQuarterPrice);
@@ -328,19 +346,19 @@
                         const row = `
                             <tr>
                                 <td>${symbol}</td>
-                                <td>${Math.round(spotPrice).toLocaleString()}</td>
-                                <td>${currentQuarterPrice ? Math.round(currentQuarterPrice).toLocaleString() : 'N/A'}</td>
+                                <td>${formatPrice(spotPrice)}</td>
+                                <td>${formatPrice(currentQuarterPrice)}</td>
                                 <td>${currentQuarterVolumeFormatted}</td>
                                 <td>${currentQuarterSpread}</td>
-                                <td>${currentQuarterPrice ? formatPremium(currentQuarterPremium) : 'N/A'}</td>
+                                <td>${formatPremium(currentQuarterPremium)}</td>
                                 <td>${currentQuarterDays}</td>
-                                <td>${currentQuarterPrice ? formatPremium(currentQuarterAPR) : 'N/A'}</td>
-                                <td>${nextQuarterPrice ? Math.round(nextQuarterPrice).toLocaleString() : 'N/A'}</td>
+                                <td>${formatPremium(currentQuarterAPR)}</td>
+                                <td>${formatPrice(nextQuarterPrice)}</td>
                                 <td>${nextQuarterVolumeFormatted}</td>
                                 <td>${nextQuarterSpread}</td>
-                                <td>${nextQuarterPrice ? formatPremium(nextQuarterPremium) : 'N/A'}</td>
+                                <td>${formatPremium(nextQuarterPremium)}</td>
                                 <td>${nextQuarterDays}</td>
-                                <td>${nextQuarterPrice ? formatPremium(nextQuarterAPR) : 'N/A'}</td>
+                                <td>${formatPremium(nextQuarterAPR)}</td>
                             </tr>
                         `;
                         tableBody.innerHTML += row;
@@ -352,12 +370,8 @@
 
                     } catch (error) {
                         console.error(`Error fetching ${symbol}:`, error);
-                        tableBody.innerHTML += `
-                            <tr>
-                                <td>${symbol}</td>
-                                <td colspan="9">Error fetching data: ${error.message}</td>
-                            </tr>
-                        `;
+                        // 出错时不添加行，直接继续下一个币种
+                        continue;
                     }
                 }
 
@@ -396,6 +410,15 @@
             // 只保留设置表格排序
             setupTableSorting();
         });
+
+        // 添加一个格式化价格的函数
+        function formatPrice(price) {
+            if (price < 1000) {
+                return price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            } else {
+                return Math.round(price).toLocaleString();
+            }
+        }
     </script>
 </body>
 </html>
