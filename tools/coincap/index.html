@@ -403,8 +403,8 @@
                         <td class="${priceChangeClass}">
                             ${(coin.price_change_percentage_24h || 0).toFixed(2)}%
                         </td>
-                        <td>$${(coin.market_cap || 0).toLocaleString()}</td>
-                        <td>$${(coin.total_volume || 0).toLocaleString()}</td>
+                        <td>$${Math.floor(coin.market_cap || 0).toLocaleString()}</td>
+                        <td>$${Math.floor(coin.total_volume || 0).toLocaleString()}</td>
                     </tr>
                 `;
                 tbody.innerHTML += row;
