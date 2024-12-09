@@ -6,85 +6,161 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>交易工具集</title>
     <style>
+      :root {
+        --primary-color: #3498db;
+        --hover-color: #2980b9;
+        --text-primary: #2c3e50;
+        --text-secondary: #666;
+        --bg-color: #f8f9fa;
+      }
+
       body {
         margin: 0;
         padding: 0;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-        background: #f5f5f5;
+        background: var(--bg-color);
+        color: var(--text-primary);
+        line-height: 1.6;
       }
 
       .container {
         max-width: 1200px;
         margin: 0 auto;
-        padding: 20px;
+        padding: 40px 20px;
       }
 
       header {
         text-align: center;
-        margin-bottom: 40px;
+        margin-bottom: 50px;
+        padding: 30px 0;
+        background: linear-gradient(135deg, var(--primary-color), #34495e);
+        color: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
       }
 
       h1 {
-        color: #333;
-        font-size: 2.5em;
+        font-size: 2.8em;
+        margin: 0;
+        letter-spacing: 1px;
+      }
+
+      .subtitle {
+        font-size: 1.2em;
+        margin-top: 10px;
+        opacity: 0.9;
       }
 
       .tools-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 20px;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 25px;
         padding: 20px;
       }
 
       .tool-card {
         background: white;
-        border-radius: 8px;
-        padding: 20px;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
         cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s;
+        transition: all 0.3s ease;
         text-decoration: none;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .tool-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--primary-color);
+        opacity: 0;
+        transition: opacity 0.3s ease;
       }
 
       .tool-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+      }
+
+      .tool-card:hover::before {
+        opacity: 1;
       }
 
       .tool-card h3 {
-        margin: 0 0 10px 0;
-        color: #2c3e50;
+        margin: 0 0 12px 0;
+        color: var(--text-primary);
+        font-size: 1.4em;
       }
 
       .tool-card p {
         margin: 0;
-        color: #666;
-        font-size: 0.9em;
+        color: var(--text-secondary);
+        font-size: 1em;
+        line-height: 1.5;
+      }
+
+      .tool-icon {
+        font-size: 2em;
+        margin-bottom: 15px;
+        color: var(--primary-color);
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 20px 15px;
+        }
+        
+        header {
+          margin-bottom: 30px;
+          padding: 20px 0;
+        }
+
+        h1 {
+          font-size: 2em;
+        }
+
+        .tools-grid {
+          grid-template-columns: 1fr;
+          gap: 20px;
+          padding: 10px;
+        }
       }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   </head>
   <body>
     <div class="container">
       <header>
         <h1>交易工具集</h1>
+        <div class="subtitle">专业的加密货币交易工具平台</div>
       </header>
       
       <main class="tools-grid">
         <a href="/tools/arbitrage/" class="tool-card">
+          <div class="tool-icon"><i class="fas fa-exchange-alt"></i></div>
           <h3>交割合约套利</h3>
-          <p>交易所交割合约套利工具</p>
+          <p>专业的交易所交割合约套利工具，帮助您捕捉市场机会，实现稳定收益。</p>
         </a>
         <a href="/tools/fundingrate/" class="tool-card">
+          <div class="tool-icon"><i class="fas fa-percentage"></i></div>
           <h3>费率查询</h3>
-          <p>查看各交易所永续合约资金费率</p>
+          <p>实时监控各大交易所永续合约资金费率，助您把握最佳交易时机。</p>
         </a>
         <a href="/tools/coincap/" class="tool-card">
-          <h3>行情</h3>
-          <p>查看实时加密货币市场行情</p>
+          <div class="tool-icon"><i class="fas fa-chart-line"></i></div>
+          <h3>行情中心</h3>
+          <p>全面的加密货币市场行情数据，包含实时价格、交易量等核心指标。</p>
         </a>
         <a href="/tools/compoundInterest/" class="tool-card">
+          <div class="tool-icon"><i class="fas fa-calculator"></i></div>
           <h3>复利计算器</h3>
-          <p>计算投资复利收益</p>
+          <p>精确计算您的投资复利收益，帮助制定长期投资策略。</p>
         </a>
       </main>
     </div>
