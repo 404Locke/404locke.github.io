@@ -105,7 +105,7 @@
                                 <th class="sortable sort-desc" data-sort="volume">24h成交额(USD)</th>
                                 <th>剩余天数</th>
                                 <th class="sortable" data-sort="apr">年化收益</th>
-                                <th class="sortable" data-sort="dailyProfit">每日收益(¥)</th>
+                                <th class="sortable" data-sort="dailyProfit">每日收益($10000)</th>
                             </tr>
                         </thead>
                         <tbody id="futuresList"></tbody>
@@ -347,8 +347,9 @@
             const contractValue = symbol.contractSize;
             const volume = Math.round(parseFloat(futuresData.volume) * contractValue);
             
-            // 计算每日收益（基于10000元投资）
-            const dailyProfit = (10000 * (apr / 365)) / 100;
+            // 修改每日收益计算逻辑
+            // 如果年化收益率是 apr%，那么每日收益就是 10000 * (apr/100) / 365
+            const dailyProfit = (10000 * (apr / 100)) / 365;
 
             // 更新或添加数据
             const existingIndex = tableData.findIndex(item => item.symbol === symbol.symbol);
@@ -415,7 +416,7 @@
                         ${data.apr.toFixed(2)}%
                     </td>
                     <td class="${data.dailyProfit >= 0 ? 'premium-positive' : 'premium-negative'}">
-                        ${data.dailyProfit.toFixed(2)}
+                        ${formatDailyProfit(data.dailyProfit)}
                     </td>
                 </tr>
             `).join('');
@@ -425,6 +426,11 @@
             const now = new Date();
             document.getElementById('futuresRefreshTime').textContent = 
                 `最后更新: ${now.toLocaleTimeString()}`;
+        }
+
+        function formatDailyProfit(profit) {
+            const className = profit >= 0 ? 'premium-positive' : 'premium-negative';
+            return `<span class="${className}">$${profit.toFixed(2)}</span>`;
         }
 
         document.addEventListener('DOMContentLoaded', () => {
