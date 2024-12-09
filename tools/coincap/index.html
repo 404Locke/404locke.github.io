@@ -316,6 +316,33 @@
                 font-size: 14px;
             }
         }
+
+        .time-row td {
+            border-bottom: none !important;
+            padding: 4px 12px !important;
+        }
+
+        /* 暗黑模式支持 */
+        @media (prefers-color-scheme: dark) {
+            .time-row td {
+                color: #888 !important;
+            }
+        }
+
+        .time-display {
+            text-align: left;
+            padding: 5px 12px;
+            margin: 10px 0;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        /* 暗黑模式支持 */
+        @media (prefers-color-scheme: dark) {
+            .time-display {
+                color: #888;
+            }
+        }
     </style>
 </head>
 <body>
@@ -331,6 +358,9 @@
             <a href="https://coinmarketcap.com" target="_blank" class="btn-base link-btn">coinmarketcap</a>
             <a href="https://dropstab.com" target="_blank" class="btn-base link-btn">解锁情况 dropstab</a>
             <a href="https://tokenomist.ai" target="_blank" class="btn-base link-btn">解锁情况 tokenomist</a>
+        </div>
+        <div class="time-display">
+            更新时间：<span id="updateTime"></span>
         </div>
         <table class="market-table">
             <thead>
@@ -422,9 +452,17 @@
             return `${symbol.toUpperCase()}-${truncatedName}`;
         }
 
+        function formatTime(date) {
+            const pad = (n) => n < 10 ? '0' + n : n;
+            return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+        }
+
         function renderTable() {
             const tbody = document.getElementById('marketData');
             tbody.innerHTML = '';
+            
+            // 更新时间显示
+            document.getElementById('updateTime').textContent = formatTime(new Date());
             
             marketData.forEach(coin => {
                 const priceChangeClass = coin.price_change_percentage_24h >= 0 ? 'price-up' : 'price-down';
