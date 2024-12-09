@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binance Delivery Futures Scanner</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: auto; }
+        .price-info { margin: 20px 0; }
+        .premium-positive { color: #00a960; }
+        .premium-negative { color: #d9234c; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f5f5f5; }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .controls {
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Binance Delivery Futures Arbitrage Scanner</h2>
+        <div class="controls" style="margin-bottom: 20px;">
+            <button onclick="fetchAllPrices()" style="padding: 8px 16px; cursor: pointer;">
+                Refresh Data
+            </button>
+            <span id="lastUpdate" style="margin-left: 15px; color: #666;">
+                Last update: -
+            </span>
+        </div>
+        <div class="price-info">
+            <table id="priceTable">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Spot Price</th>
+                        <th>DEC 2024</th>
+                        <th>Spread</th>
+                        <th>Premium</th>
+                        <th>Days Left</th>
+                        <th>APR</th>
+                        <th>MAR 2025</th>
+                        <th>Spread</th>
+                        <th>Premium</th>
+                        <th>Days Left</th>
+                        <th>APR</th>
+                    </tr>
+                </thead>
+                <tbody id="priceTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const BINANCE_API_BASE = 'https://api.binance.com/api/v3';
+        const BINANCE_DELIVERY_API = 'https://dapi.binance.com/dapi/v1';
+        const SYMBOLS = ['BTC', 'ETH'];
+
+        function calculateAPR(premium, daysToExpiry) {
+            return (premium / daysToExpiry) * 365;
+        }
+
+        function getDaysToExpiry(isCurrentQuarter) {
+            const now = new Date();
+            // JavaScript中月份从0开始计数：11表示12月
+            const currentDelivery = new Date(2024, 11, 27);  // 2024年12月27日
+            // 2表示3月
+            const nextDelivery = new Date(2025, 2, 28);      // 2025年3月28日
+            
+            const targetDate = isCurrentQuarter ? currentDelivery : nextDelivery;
+            const days = Math.max(1, Math.ceil((targetDate - now) / (1000 * 60 * 60 * 24)));
+            return days;
+        }
+
+        function formatPremium(premium) {
+            const className = premium >= 0 ? 'premium-positive' : 'premium-negative';
+            return `<span class="${className}">${premium.toFixed(2)}%</span>`;
+        }
+
+        async function fetchAllPrices() {
+            const tableBody = document.getElementById('priceTableBody');
+            tableBody.innerHTML = '';
+
+            try {
+                for (const symbol of SYMBOLS) {
+                    try {
+                        // 获取现货价格
+                        const spotResponse = await fetch(`${BINANCE_API_BASE}/ticker/price?symbol=${symbol}USDT`);
+                        const spotData = await spotResponse.json();
+                        const spotPrice = parseFloat(spotData.price);
+
+                        // 获取所有交割合约信息
+                        const deliveryResponse = await fetch(`${BINANCE_DELIVERY_API}/ticker/price`);
+                        const deliveryData = await deliveryResponse.json();
+                        
+                        // 使用正确的合约代码格式
+                        const currentQuarterContract = deliveryData.find(item => 
+                            item.symbol === `${symbol}USD_241227`);
+                        const nextQuarterContract = deliveryData.find(item => 
+                            item.symbol === `${symbol}USD_250328`);
+
+                        // 修正这里：使用nextQuarterContract.price而不是currentQuarterContract.price
+                        const currentQuarterPrice = currentQuarterContract ? parseFloat(currentQuarterContract.price) : 0;
+                        const nextQuarterPrice = nextQuarterContract ? parseFloat(nextQuarterContract.price) : 0;  // 修正这行
+
+                        // 计算差价（Spread）
+                        const currentQuarterSpread = currentQuarterPrice ? Math.abs(currentQuarterPrice - spotPrice).toFixed(2) : 'N/A';
+                        const nextQuarterSpread = nextQuarterPrice ? Math.abs(nextQuarterPrice - spotPrice).toFixed(2) : 'N/A';
+
+                        // 计算溢价率
+                        const currentQuarterPremium = currentQuarterPrice ? ((currentQuarterPrice - spotPrice) / spotPrice) * 100 : 0;
+                        const nextQuarterPremium = nextQuarterPrice ? ((nextQuarterPrice - spotPrice) / spotPrice) * 100 : 0;
+
+                        const currentQuarterDays = getDaysToExpiry(true);
+                        const nextQuarterDays = getDaysToExpiry(false);
+                        
+                        const currentQuarterAPR = calculateAPR(currentQuarterPremium, currentQuarterDays);
+                        const nextQuarterAPR = calculateAPR(nextQuarterPremium, nextQuarterDays);
+
+                        console.log(`${symbol} prices:`, {
+                            spot: spotPrice,
+                            currentQuarter: currentQuarterPrice,
+                            nextQuarter: nextQuarterPrice
+                        });
+
+                        const row = `
+                            <tr>
+                                <td>${symbol}</td>
+                                <td>${spotPrice.toFixed(2)}</td>
+                                <td>${currentQuarterPrice ? currentQuarterPrice.toFixed(2) : 'N/A'}</td>
+                                <td>${currentQuarterSpread}</td>
+                                <td>${currentQuarterPrice ? formatPremium(currentQuarterPremium) : 'N/A'}</td>
+                                <td>${currentQuarterDays}</td>
+                                <td>${currentQuarterPrice ? formatPremium(currentQuarterAPR) : 'N/A'}</td>
+                                <td>${nextQuarterPrice ? nextQuarterPrice.toFixed(2) : 'N/A'}</td>
+                                <td>${nextQuarterSpread}</td>
+                                <td>${nextQuarterPrice ? formatPremium(nextQuarterPremium) : 'N/A'}</td>
+                                <td>${nextQuarterDays}</td>
+                                <td>${nextQuarterPrice ? formatPremium(nextQuarterAPR) : 'N/A'}</td>
+                            </tr>
+                        `;
+                        tableBody.innerHTML += row;
+
+                        // 更新最后刷新时间
+                        const now = new Date();
+                        const timeString = now.toLocaleTimeString();
+                        document.getElementById('lastUpdate').textContent = `Last update: ${timeString}`;
+
+                    } catch (error) {
+                        console.error(`Error fetching ${symbol}:`, error);
+                        tableBody.innerHTML += `
+                            <tr>
+                                <td>${symbol}</td>
+                                <td colspan="9">Error fetching data: ${error.message}</td>
+                            </tr>
+                        `;
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('lastUpdate').textContent = 
+                    `Last update failed at ${new Date().toLocaleTimeString()}`;
+            }
+        }
+
+        // 初始加载
+        fetchAllPrices();
+
+        // 每分钟自动刷新一次（60000毫秒 = 1分钟）
+        setInterval(fetchAllPrices, 60000);
+    </script>
+</body>
+</html>
