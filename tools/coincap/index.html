@@ -181,12 +181,14 @@
             /* 调整某些列的最小宽度 */
             .market-table th:nth-child(1),
             .market-table td:nth-child(1) {
-                min-width: 60px;  /* 排名列 */
+                min-width: 40px;  /* 减小排名列宽度 */
+                padding-right: 4px;  /* 减小右侧padding */
             }
 
             .market-table th:nth-child(2),
             .market-table td:nth-child(2) {
-                min-width: 180px; /* 名称列 */
+                min-width: 160px; /* 减小名称列宽度 */
+                padding-left: 4px;  /* 减小左侧padding */
             }
 
             .market-table th:nth-child(3),
@@ -225,6 +227,18 @@
             .progress-container {
                 height: 2px;
             }
+        }
+
+        /* 添加默认设备的列宽度控制 */
+        .market-table th:nth-child(1),
+        .market-table td:nth-child(1) {
+            width: 40px;  /* 排名列固定宽度 */
+            padding-right: 4px;
+        }
+
+        .market-table th:nth-child(2),
+        .market-table td:nth-child(2) {
+            padding-left: 4px;
         }
 
         /* 针对更小屏幕的优化 */
@@ -351,6 +365,12 @@
             return `$${price.toLocaleString(undefined, {maximumFractionDigits: 2})}`;
         }
 
+        function formatName(name, symbol) {
+            // 截取名称最多8个字符，超出部分用...表示
+            const truncatedName = name.length > 8 ? name.slice(0, 8) + '...' : name;
+            return `${symbol.toUpperCase()}-${truncatedName}`;
+        }
+
         function renderTable() {
             let sortedData = [...marketData];
             
@@ -377,7 +397,7 @@
                         <td>${coin.market_cap_rank || index + 1}</td>
                         <td>
                             <img src="${coin.image}" width="20" height="20" style="vertical-align: middle">
-                            ${coin.name} (${coin.symbol.toUpperCase()})
+                            ${formatName(coin.name, coin.symbol)}
                         </td>
                         <td>${formatPrice(coin.current_price)}</td>
                         <td class="${priceChangeClass}">
