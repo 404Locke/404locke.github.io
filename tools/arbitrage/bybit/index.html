@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OKX Coin-Margined Futures Scanner</title>
+    <title>Bybit Coin-Margined Futures Scanner</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css">
@@ -83,7 +83,7 @@
 </head>
 <body>
     <div class="container">
-        <h2 class="text-center mb-4">OKX币本位交割合约套利</h2>
+        <h2 class="text-center mb-4">Bybit币本位交割合约套利</h2>
         
         <!-- 交割日期选项卡 -->
         <ul class="nav nav-tabs delivery-date-tabs" id="deliveryDates">
@@ -127,21 +127,25 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        const OKX_API_BASE = 'https://www.okx.com';
-        const SYMBOLS = ['BTC', 'ETH', 'LTC', 'XRP', 'BCH', 'ETC'];
+        const BYBIT_API_BASE = 'https://api.bybit.com';
+        const SYMBOLS = ['BTC', 'ETH'];
 
         async function getAvailableDeliveryDates() {
             try {
-                const response = await fetch(`${OKX_API_BASE}/api/v5/public/instruments?instType=FUTURES&uly=BTC-USD`);
+                const response = await fetch(`${BYBIT_API_BASE}/v5/market/instruments-info?category=linear`);
                 const data = await response.json();
-                if (!data.data) return [];
+                if (!data.result?.list) return [];
                 
-                const dates = [...new Set(data.data
-                    .filter(item => item.instId.startsWith('BTC-USD-'))
-                    .map(item => item.instId.split('-')[2])
+                const dates = [...new Set(data.result.list
+                    .filter(item => item.symbol.includes('USDT') && item.contractType === 'InversePerpetual')
+                    .map(item => {
+                        console.log("Contract:", item);
+                        return item.deliveryTime ? item.deliveryTime.slice(0, 8) : null;
+                    })
                     .filter(date => date)
                 )];
                 
+                console.log("Available dates:", dates);
                 return dates.sort();
             } catch (error) {
                 console.error('Error fetching delivery dates:', error);
@@ -232,15 +236,15 @@
 
         async function fetchArbitrageData(selectedDate) {
             NProgress.start();
-            tableData = []; // 清空表格数据
+            tableData = [];
             document.getElementById('futuresList').innerHTML = '';
             
             try {
                 for (const symbol of SYMBOLS) {
                     try {
                         const [spotRes, futuresRes] = await Promise.all([
-                            fetch(`${OKX_API_BASE}/api/v5/market/ticker?instId=${symbol}-USDT`),
-                            fetch(`${OKX_API_BASE}/api/v5/market/ticker?instId=${symbol}-USD-${selectedDate}`)
+                            fetch(`${BYBIT_API_BASE}/v5/market/tickers?category=spot&symbol=${symbol}USDT`),
+                            fetch(`${BYBIT_API_BASE}/v5/market/tickers?category=linear&symbol=${symbol}USDT`)
                         ]);
 
                         const [spotData, futuresData] = await Promise.all([
@@ -251,10 +255,22 @@
                         console.log(`${symbol} Spot Data:`, spotData);
                         console.log(`${symbol} Futures Data:`, futuresData);
 
-                        if (spotData.data?.[0] && futuresData.data?.[0]) {
-                            updateFuturesTable(symbol, spotData.data[0], futuresData.data[0], selectedDate);
+                        if (spotData.result?.list?.[0] && futuresData.result?.list?.[0]) {
+                            const spotItem = spotData.result.list[0];
+                            const futuresItem = futuresData.result.list[0];
+                            
+                            const adaptedSpotData = {
+                                last: spotItem.lastPrice,
+                            };
+                            
+                            const adaptedFuturesData = {
+                                last: futuresItem.lastPrice,
+                                volCcy24h: futuresItem.volume24h,
+                            };
+
+                            updateFuturesTable(symbol, adaptedSpotData, adaptedFuturesData, selectedDate);
                         } else {
-                            console.log(`No data for ${symbol}`);
+                            console.log(`No data found for ${symbol}`);
                         }
                     } catch (error) {
                         console.error(`Error fetching ${symbol}:`, error);
