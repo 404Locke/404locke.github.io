@@ -3,42 +3,380 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OKX 币本位套利</title>
+    <title>OKX Coin-Margined Futures Scanner</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css">
     <style>
-        body {
-            font-family: Arial, sans-serif;
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+        }
+        .container { 
+            max-width: 1400px;
+            margin: 0 auto;
             padding: 20px;
+        }
+        .premium-positive { color: #00a960; }
+        .premium-negative { color: #d9234c; }
+        table { 
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        th, td { 
+            padding: 10px; 
+            text-align: left; 
+            border-bottom: 1px solid #ddd; 
+        }
+        .refresh-time {
+            font-size: 0.9em;
+            color: #666;
+        }
+        #refreshButton {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            z-index: 1000;
+        }
+        .delivery-date-tabs {
+            margin-bottom: 20px;
+        }
+        .delivery-date-tabs .nav-link {
+            color: #666;
+        }
+        .delivery-date-tabs .nav-link.active {
+            font-weight: bold;
+            color: #000;
+        }
+        th.sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 25px !important;
+        }
+
+        th.sortable::after {
+            content: '↕';
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0.3;
+        }
+
+        th.sortable.sort-asc::after {
+            content: '↑';
+            opacity: 1;
+        }
+
+        th.sortable.sort-desc::after {
+            content: '↓';
+            opacity: 1;
+        }
+
+        th.sortable:hover {
             background-color: #f5f5f5;
-        }
-        .pair-card {
-            background: white;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .profit {
-            font-weight: bold;
-            color: #28a745;
-        }
-        .loss {
-            font-weight: bold;
-            color: #dc3545;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 class="text-center mb-4">OKX 币本位套利</h1>
-        <div class="row">
-            <div class="col-md-6 offset-md-3">
-                <div id="pairsList"></div>
+        <h2 class="text-center mb-4">OKX币本位交割合约套利</h2>
+        
+        <!-- 交割日期选项卡 -->
+        <ul class="nav nav-tabs delivery-date-tabs" id="deliveryDates">
+            <!-- 交割日期会通过JavaScript动态添加 -->
+        </ul>
+
+        <!-- 交割合约套利表格 -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>币本位交割合约套利</span>
+                <span class="refresh-time" id="futuresRefreshTime"></span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>交易对</th>
+                                <th>现货价格</th>
+                                <th>交割价格</th>
+                                <th>价差</th>
+                                <th class="sortable" data-sort="premium">溢价率</th>
+                                <th class="sortable sort-desc" data-sort="volume">24h成交额(USD)</th>
+                                <th>剩余天数</th>
+                                <th class="sortable" data-sort="apr">年化收益</th>
+                            </tr>
+                        </thead>
+                        <tbody id="futuresList"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
+    <button id="refreshButton" class="btn btn-primary rounded-circle">
+        <i class="bi bi-arrow-clockwise"></i>
+    </button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="main.js"></script>
+    
+    <script>
+        const OKX_API_BASE = 'https://www.okx.com';
+        const SYMBOLS = ['BTC', 'ETH', 'LTC', 'XRP', 'BCH', 'ETC'];
+
+        async function getAvailableDeliveryDates() {
+            try {
+                const response = await fetch(`${OKX_API_BASE}/api/v5/public/instruments?instType=FUTURES&uly=BTC-USD`);
+                const data = await response.json();
+                if (!data.data) return [];
+                
+                const dates = [...new Set(data.data
+                    .filter(item => item.instId.startsWith('BTC-USD-'))
+                    .map(item => item.instId.split('-')[2])
+                    .filter(date => date)
+                )];
+                
+                return dates.sort();
+            } catch (error) {
+                console.error('Error fetching delivery dates:', error);
+                return [];
+            }
+        }
+
+        function formatPrice(price) {
+            if (price < 1000) {
+                return price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            return Math.round(price).toLocaleString();
+        }
+
+        function formatPremium(premium) {
+            const className = premium >= 0 ? 'premium-positive' : 'premium-negative';
+            return `<span class="${className}">${premium.toFixed(2)}%</span>`;
+        }
+
+        function formatVolume(volume, price) {
+            if (!volume || !price) return 'N/A';
+            const volumeUSD = parseFloat(volume) * parseFloat(price);
+            if (volumeUSD >= 1000000) {
+                return (volumeUSD / 1000000).toFixed(2) + 'M';
+            }
+            if (volumeUSD >= 1000) {
+                return (volumeUSD / 1000).toFixed(2) + 'K';
+            }
+            return Math.round(volumeUSD).toLocaleString();
+        }
+
+        let tableData = [];
+
+        function updateFuturesTable(symbol, spotData, futuresData, deliveryDate) {
+            const spotPrice = parseFloat(spotData.last);
+            const futuresPrice = parseFloat(futuresData.last);
+            const spread = futuresPrice - spotPrice;
+            const premium = (spread / spotPrice) * 100;
+            const daysLeft = getDaysToExpiry(deliveryDate);
+            const apr = (premium / daysLeft) * 365;
+            const volume = parseFloat(futuresData.volCcy24h) * futuresPrice;
+
+            tableData.push({
+                symbol: `${symbol}-USD`,
+                spotPrice,
+                futuresPrice,
+                spread,
+                premium,
+                volume,
+                daysLeft,
+                apr
+            });
+
+            sortAndRenderTable();
+        }
+
+        function sortAndRenderTable() {
+            const sortColumn = document.querySelector('th.sort-asc, th.sort-desc');
+            if (sortColumn) {
+                const sortType = sortColumn.dataset.sort;
+                const isAsc = sortColumn.classList.contains('sort-asc');
+                
+                tableData.sort((a, b) => {
+                    let valueA = a[sortType];
+                    let valueB = b[sortType];
+                    return isAsc ? valueA - valueB : valueB - valueA;
+                });
+            } else {
+                tableData.sort((a, b) => b.volume - a.volume);
+            }
+
+            document.getElementById('futuresList').innerHTML = tableData.map(row => `
+                <tr>
+                    <td>${row.symbol}</td>
+                    <td>${formatPrice(row.spotPrice)}</td>
+                    <td>${formatPrice(row.futuresPrice)}</td>
+                    <td>${row.spread.toFixed(2)}</td>
+                    <td>${formatPremium(row.premium)}</td>
+                    <td>${formatVolume(row.volume, 1)}</td>
+                    <td>${row.daysLeft}</td>
+                    <td>${formatPremium(row.apr)}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function fetchArbitrageData(selectedDate) {
+            NProgress.start();
+            tableData = []; // 清空表格数据
+            document.getElementById('futuresList').innerHTML = '';
+            
+            try {
+                for (const symbol of SYMBOLS) {
+                    try {
+                        const [spotRes, futuresRes] = await Promise.all([
+                            fetch(`${OKX_API_BASE}/api/v5/market/ticker?instId=${symbol}-USDT`),
+                            fetch(`${OKX_API_BASE}/api/v5/market/ticker?instId=${symbol}-USD-${selectedDate}`)
+                        ]);
+
+                        const [spotData, futuresData] = await Promise.all([
+                            spotRes.json(),
+                            futuresRes.json()
+                        ]);
+
+                        console.log(`${symbol} Spot Data:`, spotData);
+                        console.log(`${symbol} Futures Data:`, futuresData);
+
+                        if (spotData.data?.[0] && futuresData.data?.[0]) {
+                            updateFuturesTable(symbol, spotData.data[0], futuresData.data[0], selectedDate);
+                        } else {
+                            console.log(`No data for ${symbol}`);
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching ${symbol}:`, error);
+                        continue;
+                    }
+                }
+
+                updateRefreshTime();
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            } finally {
+                NProgress.done();
+            }
+        }
+
+        function updateRefreshTime() {
+            const time = new Date().toLocaleTimeString();
+            document.getElementById('futuresRefreshTime').textContent = `更新时间: ${time}`;
+        }
+
+        function getDaysToExpiry(deliveryDate) {
+            const now = new Date();
+            const expiry = new Date(
+                2000 + parseInt(deliveryDate.slice(0, 2)),
+                parseInt(deliveryDate.slice(2, 4)) - 1,
+                parseInt(deliveryDate.slice(4))
+            );
+            return Math.max(1, Math.ceil((expiry - now) / (1000 * 60 * 60 * 24)));
+        }
+
+        function formatDateDisplay(dateCode) {
+            return `20${dateCode.slice(0, 2)}-${dateCode.slice(2, 4)}-${dateCode.slice(4)}`;
+        }
+
+        async function initializeDeliveryDates() {
+            const dates = await getAvailableDeliveryDates();
+            const tabsContainer = document.getElementById('deliveryDates');
+            
+            console.log('Available dates:', dates);
+            
+            if (dates.length === 0) {
+                console.error('No delivery dates found');
+                return;
+            }
+            
+            tabsContainer.innerHTML = '';
+            
+            dates.forEach((date, index) => {
+                const li = document.createElement('li');
+                li.className = 'nav-item';
+                li.innerHTML = `
+                    <a class="nav-link ${index === 0 ? 'active' : ''}" 
+                       href="#" 
+                       data-date="${date}">
+                        ${formatDateDisplay(date)}
+                    </a>
+                `;
+                tabsContainer.appendChild(li);
+            });
+
+            if (dates.length > 0) {
+                fetchArbitrageData(dates[0]);
+            }
+
+            tabsContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('nav-link')) {
+                    e.preventDefault();
+                    document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+                    e.target.classList.add('active');
+                    fetchArbitrageData(e.target.dataset.date);
+                }
+            });
+        }
+
+        function setupSorting() {
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.addEventListener('click', () => {
+                    const currentSort = th.classList.contains('sort-asc') ? 'asc' : 
+                                      th.classList.contains('sort-desc') ? 'desc' : 'none';
+                    
+                    // 清除所有排序状态
+                    document.querySelectorAll('th.sortable').forEach(header => {
+                        header.classList.remove('sort-asc', 'sort-desc');
+                    });
+
+                    // 设置新的排序状态
+                    switch(currentSort) {
+                        case 'none':
+                            th.classList.add('sort-asc'); // 第一次点击，升序
+                            break;
+                        case 'asc':
+                            th.classList.add('sort-desc'); // 第二次点击，降序
+                            break;
+                        case 'desc':
+                            // 第三次点击，移除所有排序状态，回到默认
+                            break;
+                    }
+
+                    sortAndRenderTable();
+                });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeDeliveryDates();
+            setupSorting();
+            
+            // 设置默认排序状态为交易量降序
+            document.querySelectorAll('th.sortable').forEach(th => {
+                if (th.dataset.sort === 'volume') {
+                    th.classList.add('sort-desc');
+                } else {
+                    th.classList.remove('sort-asc', 'sort-desc');
+                }
+            });
+            
+            document.getElementById('refreshButton').addEventListener('click', () => {
+                const activeDate = document.querySelector('.nav-link.active').dataset.date;
+                fetchArbitrageData(activeDate);
+            });
+        });
+
+        setInterval(() => {
+            const activeDate = document.querySelector('.nav-link.active').dataset.date;
+            fetchArbitrageData(activeDate);
+        }, 60000);
+    </script>
 </body>
 </html> 
