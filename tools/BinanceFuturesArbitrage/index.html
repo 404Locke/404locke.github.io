@@ -382,6 +382,39 @@
             });
         }
 
+        // 添加一个重置排序的函数
+        function resetToDefaultSort() {
+            const volumeColumnIndex = 3; // 第一个交易量列的索引
+            
+            // 清除所有列的排序标记
+            document.querySelectorAll('th').forEach(header => {
+                header.classList.remove('sort-asc', 'sort-desc');
+            });
+            
+            // 设置交易量列为降序
+            const volumeHeader = document.querySelector(`th:nth-child(${volumeColumnIndex + 1})`);
+            if (volumeHeader) {
+                volumeHeader.classList.add('sort-desc');
+                // 强制设置为降序排序
+                const tbody = document.getElementById('priceTableBody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                
+                rows.sort((a, b) => {
+                    const aValue = parseValue(a.cells[volumeColumnIndex].textContent);
+                    const bValue = parseValue(b.cells[volumeColumnIndex].textContent);
+                    
+                    if (isNaN(aValue) && isNaN(bValue)) return 0;
+                    if (isNaN(aValue)) return 1;
+                    if (isNaN(bValue)) return -1;
+                    
+                    return bValue - aValue; // 降序排序
+                });
+
+                // 重新插入排序后的行
+                rows.forEach(row => tbody.appendChild(row));
+            }
+        }
+
         async function fetchAllPrices() {
             NProgress.start();
             const tableBody = document.getElementById('priceTableBody');
@@ -491,41 +524,27 @@
                     }
                 }
 
-                // 所有数据加载完成后
-                const volumeColumnIndex = 3; // 第一个交易量列的索引
-                sortTable(volumeColumnIndex, true); // 直接调用排序
-                
-                // 设置排序标记
-                const volumeHeader = document.querySelector(`th:nth-child(${volumeColumnIndex + 1})`);
-                if (volumeHeader) {
-                    // 清除其他列的排序标记
-                    document.querySelectorAll('th').forEach(header => {
-                        header.classList.remove('sort-asc', 'sort-desc');
-                    });
-                    // 设置为降序
-                    volumeHeader.classList.add('sort-desc');
-                }
+                // 所有数据加载完成后，重置为默认排序
+                resetToDefaultSort();
 
             } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('lastUpdate').textContent = 
                     `Last update failed at ${new Date().toLocaleTimeString()}`;
             } finally {
-                NProgress.done(); // 完成进度条
+                NProgress.done();
             }
         }
 
-        // 初始加载
-        fetchAllPrices();
-
-        // 每分钟自动刷新一次（60000毫秒 = 1分钟）
-        setInterval(fetchAllPrices, 60000);
-
         // 更新页面加载完成后的初始化代码
         document.addEventListener('DOMContentLoaded', () => {
-            // 只保留设置表格排序
             setupTableSorting();
+            // 初始加载数据
+            fetchAllPrices();
         });
+
+        // 保持自动刷新
+        setInterval(fetchAllPrices, 60000);
 
         // 添加一个格式化价格的函数
         function formatPrice(price) {
