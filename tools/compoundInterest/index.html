@@ -121,9 +121,10 @@
             }
         }
 
-        .pie-container {
+        .pie-container, .table-container {
             margin-top: 20px;
             grid-template-columns: 1fr;
+            width: 100%;
         }
 
         .pie-chart-section {
@@ -135,22 +136,13 @@
 
         .table-container {
             margin-top: 20px;
-            display: block;
-            max-width: 1200px;
-            margin-left: auto;
-            margin-right: auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .table-section {
             width: 100%;
-            padding: 20px;
             background: white;
-            border-radius: 8px;
             overflow-x: auto;
+            max-width: 100%;
         }
 
         table {
@@ -224,8 +216,8 @@
             }
 
             .table-section {
-                padding: 10px;
                 overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
             }
 
             table {
