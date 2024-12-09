@@ -175,31 +175,6 @@
 
         let tableData = [];
 
-        function updateFuturesTable(symbol, spotData, futuresData, deliveryDate) {
-            const spotPrice = parseFloat(spotData.last);
-            const futuresPrice = parseFloat(futuresData.last);
-            const spread = futuresPrice - spotPrice;
-            const premium = (spread / spotPrice) * 100;
-            const daysLeft = getDaysToExpiry(deliveryDate);
-            const apr = (premium / daysLeft) * 365;
-            const volume = parseFloat(futuresData.volCcy24h) * futuresPrice;
-            const dailyProfit = (10000 * apr / 365) / 100;
-
-            tableData.push({
-                symbol: `${symbol}-USD`,
-                spotPrice,
-                futuresPrice,
-                spread,
-                premium,
-                volume,
-                daysLeft,
-                apr,
-                dailyProfit
-            });
-
-            sortAndRenderTable();
-        }
-
         function sortAndRenderTable() {
             const sortColumn = document.querySelector('th.sort-asc, th.sort-desc');
             if (sortColumn) {
@@ -232,8 +207,7 @@
 
         async function fetchArbitrageData(selectedDate) {
             NProgress.start();
-            tableData = []; // 清空表格数据
-            document.getElementById('futuresList').innerHTML = '';
+            const newTableData = []; // 使用新的数组存储新数据，而不是直接清空原来的数据
             
             try {
                 for (const symbol of SYMBOLS) {
@@ -248,13 +222,27 @@
                             futuresRes.json()
                         ]);
 
-                        console.log(`${symbol} Spot Data:`, spotData);
-                        console.log(`${symbol} Futures Data:`, futuresData);
-
                         if (spotData.data?.[0] && futuresData.data?.[0]) {
-                            updateFuturesTable(symbol, spotData.data[0], futuresData.data[0], selectedDate);
-                        } else {
-                            console.log(`No data for ${symbol}`);
+                            const spotPrice = parseFloat(spotData.data[0].last);
+                            const futuresPrice = parseFloat(futuresData.data[0].last);
+                            const spread = futuresPrice - spotPrice;
+                            const premium = (spread / spotPrice) * 100;
+                            const daysLeft = getDaysToExpiry(selectedDate);
+                            const apr = (premium / daysLeft) * 365;
+                            const volume = parseFloat(futuresData.data[0].volCcy24h) * futuresPrice;
+                            const dailyProfit = (10000 * apr / 365) / 100;
+
+                            newTableData.push({
+                                symbol: `${symbol}-USD`,
+                                spotPrice,
+                                futuresPrice,
+                                spread,
+                                premium,
+                                volume,
+                                daysLeft,
+                                apr,
+                                dailyProfit
+                            });
                         }
                     } catch (error) {
                         console.error(`Error fetching ${symbol}:`, error);
@@ -262,7 +250,14 @@
                     }
                 }
 
-                updateRefreshTime();
+                // 只有在成功获取到数据后才更新表格
+                if (newTableData.length > 0) {
+                    tableData = newTableData; // 更新全局的 tableData
+                    sortAndRenderTable();
+                    updateRefreshTime();
+                } else {
+                    console.error('No valid data received');
+                }
             } catch (error) {
                 console.error('Error fetching data:', error);
             } finally {

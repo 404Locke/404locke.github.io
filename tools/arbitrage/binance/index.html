@@ -232,20 +232,9 @@
 
         async function fetchArbitrageData(selectedDate) {
             NProgress.start();
-            tableData = [];
-            document.getElementById('futuresList').innerHTML = '';
             
-            // 重置为默认排序状态
-            currentSortColumn = 'volume';
-            currentSortDirection = null;
-            
-            // 更新排序图标
-            document.querySelectorAll('th.sortable').forEach(th => {
-                th.classList.remove('sort-asc', 'sort-desc');
-                if (th.dataset.sort === 'volume') {
-                    th.classList.add('sort-desc');
-                }
-            });
+            // 创建一个临时数组来存储新数据
+            let newTableData = [];
             
             try {
                 const symbols = await getAvailableSymbols(selectedDate);
@@ -271,7 +260,32 @@
 
                         if (spotData && spotData.price && futuresData && 
                             (futuresData.lastPrice || futuresData.lastPrice === 0)) {
-                            updateFuturesTable(symbolInfo, spotData, futuresData, selectedDate);
+                            // 不直接更新表格，而是将数据添加到临时数组
+                            const spotPrice = parseFloat(spotData.price);
+                            const futuresPrice = parseFloat(futuresData.lastPrice);
+                            const priceDiff = futuresPrice - spotPrice;
+                            const premium = (priceDiff / spotPrice) * 100;
+                            
+                            const deliveryDate = new Date(formatDateDisplay(selectedDate));
+                            const now = new Date();
+                            const daysRemaining = Math.ceil((deliveryDate - now) / (1000 * 60 * 60 * 24));
+                            
+                            const apr = (premium / daysRemaining) * 365;
+                            const contractValue = symbolInfo.contractSize;
+                            const volume = Math.round(parseFloat(futuresData.volume) * contractValue);
+                            const dailyProfit = (10000 * (apr / 100)) / 365;
+
+                            newTableData.push({
+                                symbol: symbolInfo.symbol,
+                                spotPrice,
+                                futuresPrice,
+                                priceDiff,
+                                premium,
+                                volume,
+                                daysRemaining,
+                                apr,
+                                dailyProfit
+                            });
                         }
                     } catch (error) {
                         console.error(`Error fetching ${symbolInfo.symbol}:`, error);
@@ -279,7 +293,14 @@
                     }
                 }
 
-                updateRefreshTime();
+                // 只有在成功获取到数据后才更新表格
+                if (newTableData.length > 0) {
+                    tableData = newTableData;
+                    renderTable();
+                    updateRefreshTime();
+                } else {
+                    console.error('No valid data received');
+                }
             } catch (error) {
                 console.error('Error fetching data:', error);
             } finally {
@@ -331,47 +352,6 @@
                     renderTable();
                 });
             });
-        }
-
-        function updateFuturesTable(symbol, spotData, futuresData, selectedDate) {
-            const spotPrice = parseFloat(spotData.price);
-            const futuresPrice = parseFloat(futuresData.lastPrice);
-            const priceDiff = futuresPrice - spotPrice;
-            const premium = (priceDiff / spotPrice) * 100;
-            
-            const deliveryDate = new Date(formatDateDisplay(selectedDate));
-            const now = new Date();
-            const daysRemaining = Math.ceil((deliveryDate - now) / (1000 * 60 * 60 * 24));
-            
-            const apr = (premium / daysRemaining) * 365;
-            const contractValue = symbol.contractSize;
-            const volume = Math.round(parseFloat(futuresData.volume) * contractValue);
-            
-            // 修改每日收益计算逻辑
-            // 如果年化收益率是 apr%，那么每日收益就是 10000 * (apr/100) / 365
-            const dailyProfit = (10000 * (apr / 100)) / 365;
-
-            // 更新或添加数据
-            const existingIndex = tableData.findIndex(item => item.symbol === symbol.symbol);
-            const newData = {
-                symbol: symbol.symbol,
-                spotPrice,
-                futuresPrice,
-                priceDiff,
-                premium,
-                volume,
-                daysRemaining,
-                apr,
-                dailyProfit
-            };
-
-            if (existingIndex !== -1) {
-                tableData[existingIndex] = newData;
-            } else {
-                tableData.push(newData);
-            }
-
-            renderTable();
         }
 
         function renderTable() {
