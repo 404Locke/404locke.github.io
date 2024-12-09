@@ -289,7 +289,6 @@
                 <select id="compoundPeriod" class="select-style">
                     <option value="yearly">按年复利</option>
                     <option value="monthly">按月复利</option>
-                    <option value="daily">按天复利</option>
                 </select>
             </div>
             <button onclick="calculate()">计算</button>
@@ -335,8 +334,8 @@
 
         function formatMoney(number) {
             return new Intl.NumberFormat('zh-CN', {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0,
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
                 useGrouping: true
             }).format(number);
         }
@@ -364,7 +363,7 @@
                     balanceData.push(balance);
                     contributionData.push(principal + monthlyContribution * 12 * year);
                 }
-            } else if (compoundPeriod === 'monthly') {
+            } else {
                 // 按月复利
                 const monthlyRate = rate / 12;
                 const totalMonths = years * 12;
@@ -376,23 +375,6 @@
                     if (month % 12 === 0) {
                         balanceData.push(balance);
                         contributionData.push(principal + monthlyContribution * month);
-                    }
-                }
-            } else {
-                // 按天复利
-                const dailyRate = rate / 365;
-                const totalDays = years * 365;
-                
-                for (let day = 1; day <= totalDays; day++) {
-                    // 每月初追加投资
-                    if (day % 30 === 1) {
-                        balance = balance + monthlyContribution;
-                    }
-                    balance = balance * (1 + dailyRate);
-                    
-                    if (day % 365 === 0) {
-                        balanceData.push(balance);
-                        contributionData.push(principal + monthlyContribution * 12 * Math.floor(day/365));
                     }
                 }
             }
@@ -549,26 +531,77 @@
         function updateYearlyTable(balanceData, contributionData) {
             const tbody = document.getElementById('yearlyDetails').getElementsByTagName('tbody')[0];
             tbody.innerHTML = '';
+            const compoundPeriod = document.getElementById('compoundPeriod').value;
+            
+            // 更新表头
+            const thead = document.getElementById('yearlyDetails').getElementsByTagName('thead')[0];
+            const headerRow = thead.getElementsByTagName('tr')[0];
+            
+            if (compoundPeriod === 'yearly') {
+                headerRow.innerHTML = `
+                    <th>年度</th>
+                    <th>年初本金</th>
+                    <th>年度利息</th>
+                    <th>累计利息</th>
+                    <th>年末总额</th>
+                `;
+            } else { // monthly
+                headerRow.innerHTML = `
+                    <th>月份</th>
+                    <th>月初本金</th>
+                    <th>月度利息</th>
+                    <th>累计利息</th>
+                    <th>月末总额</th>
+                `;
+            }
 
             let previousBalance = balanceData[0];
             let accumulatedInterest = 0;
 
-            for(let i = 1; i < balanceData.length; i++) {
-                const balance = balanceData[i];
-                const yearlyContribution = contributionData[i] - contributionData[i-1];
-                const yearlyInterest = balance - previousBalance - yearlyContribution;
-                accumulatedInterest += yearlyInterest;
+            if (compoundPeriod === 'yearly') {
+                // 按年复利的表格内容
+                for(let i = 1; i < balanceData.length; i++) {
+                    const balance = balanceData[i];
+                    const yearlyContribution = contributionData[i] - contributionData[i-1];
+                    const yearlyInterest = balance - previousBalance - yearlyContribution;
+                    accumulatedInterest += yearlyInterest;
 
-                const row = tbody.insertRow();
-                row.innerHTML = `
-                    <td>第${i}年</td>
-                    <td>${formatMoney(previousBalance)}</td>
-                    <td>${formatMoney(yearlyInterest)}</td>
-                    <td>${formatMoney(accumulatedInterest)}</td>
-                    <td>${formatMoney(balance)}</td>
-                `;
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td>第${i}年</td>
+                        <td>${formatMoney(previousBalance)}</td>
+                        <td>${formatMoney(yearlyInterest)}</td>
+                        <td>${formatMoney(accumulatedInterest)}</td>
+                        <td>${formatMoney(balance)}</td>
+                    `;
 
-                previousBalance = balance;
+                    previousBalance = balance;
+                }
+            } else {
+                // 按月或按日复利时显示月度数据
+                const years = parseInt(document.getElementById('years').value);
+                const monthlyContribution = parseFloat(document.getElementById('contribution').value);
+                const annualRate = parseFloat(document.getElementById('rate').value) / 100;
+                const monthlyRate = annualRate / 12; // 月利率
+                
+                // 计算每月数据
+                for (let month = 1; month <= years * 12; month++) {
+                    // 计算当月利息
+                    const monthlyInterest = previousBalance * monthlyRate;
+                    accumulatedInterest += monthlyInterest;
+
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td>第${Math.floor((month-1)/12)+1}年${month%12 || 12}月</td>
+                        <td>${formatMoney(previousBalance)}</td>
+                        <td>${formatMoney(monthlyInterest)}</td>
+                        <td>${formatMoney(accumulatedInterest)}</td>
+                        <td>${formatMoney(previousBalance + monthlyInterest + monthlyContribution)}</td>
+                    `;
+
+                    // 更新下月初余额：当月本金 + 当月利息 + 月度追加投资
+                    previousBalance = previousBalance + monthlyInterest + monthlyContribution;
+                }
             }
         }
 
