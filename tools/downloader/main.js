@@ -1,24 +1,35 @@
+import { YouTubeParser, BilibiliParser } from './platform-parsers.js';
+
 async function analyzeUrl() {
     const url = document.getElementById('url').value;
     const loadingDiv = document.getElementById('loading');
     const videoListDiv = document.getElementById('videoList');
     
     if (!url) {
-        showError('请输入网页地址');
+        showError('请输入视频地址');
         return;
     }
 
     try {
-        // 显示加载动画
         loadingDiv.style.display = 'block';
         videoListDiv.style.display = 'none';
         
-        // 发送请求到后端API解析视频
-        const videos = await fetchVideoInfo(url);
+        // 根据URL判断视频平台
+        const platform = detectPlatform(url);
+        let videos;
         
-        // 显示视频列表
+        switch (platform) {
+            case 'youtube':
+                videos = await parseYouTube(url);
+                break;
+            case 'bilibili':
+                videos = await parseBilibili(url);
+                break;
+            default:
+                videos = await parseGenericVideo(url);
+        }
+        
         displayVideos(videos);
-        
         showSuccess('解析完成！');
     } catch (error) {
         showError('解析失败: ' + error.message);
@@ -27,7 +38,33 @@ async function analyzeUrl() {
     }
 }
 
-async function fetchVideoInfo(url) {
+function detectPlatform(url) {
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        return 'youtube';
+    } else if (url.includes('bilibili.com')) {
+        return 'bilibili';
+    }
+    return 'generic';
+}
+
+async function parseYouTube(url) {
+    try {
+        return await YouTubeParser.parse(url);
+    } catch (error) {
+        throw new Error(`YouTube解析失败: ${error.message}`);
+    }
+}
+
+async function parseBilibili(url) {
+    try {
+        return await BilibiliParser.parse(url);
+    } catch (error) {
+        throw new Error(`Bilibili解析失败: ${error.message}`);
+    }
+}
+
+// 原来的fetchVideoInfo改名为parseGenericVideo
+async function parseGenericVideo(url) {
     try {
         // 尝试使用no-cors模式获取网页内容
         const response = await fetch(url, {
@@ -175,9 +212,35 @@ function removeDuplicates(videos) {
     });
 }
 
+function formatDuration(seconds) {
+    if (!seconds) return '未知';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+        return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+}
+
+function formatFileSize(bytes) {
+    if (!bytes) return '未知';
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    let i = 0;
+    let size = bytes;
+    
+    while (size >= 1024 && i < sizes.length - 1) {
+        size /= 1024;
+        i++;
+    }
+    
+    return `${size.toFixed(2)} ${sizes[i]}`;
+}
+
 function displayVideos(videos) {
     const videoListDiv = document.getElementById('videoList');
-    videoListDiv.innerHTML = ''; // 清空现有内容
+    videoListDiv.innerHTML = '';
     
     videos.forEach(video => {
         const videoItem = document.createElement('div');
@@ -186,10 +249,14 @@ function displayVideos(videos) {
             <div class="video-info">
                 <div class="video-title">${video.title}</div>
                 <div class="video-meta">
-                    时长: ${video.duration} | 大小: ${video.size} | 质量: ${video.quality}
+                    <span class="platform-badge ${video.platform}">${video.platform}</span>
+                    <span>时长: ${video.duration}</span>
+                    <span>大小: ${video.size}</span>
+                    <span>质量: ${video.quality}</span>
+                    <span>格式: ${video.format}</span>
                 </div>
             </div>
-            <button class="download-btn" onclick="downloadVideo('${video.id}', '${video.url}')">
+            <button class="download-btn" onclick="downloadVideo('${video.id}', '${video.url}', '${video.platform}')">
                 下载视频
             </button>
         `;
@@ -199,24 +266,22 @@ function displayVideos(videos) {
     videoListDiv.style.display = 'block';
 }
 
-async function downloadVideo(videoId, videoUrl) {
+async function downloadVideo(videoId, videoUrl, platform) {
     try {
         showStatus('正在准备下载...');
         
-        // 获取视频格式
-        const videoFormat = getVideoFormat(videoUrl);
-        
-        switch (videoFormat) {
-            case 'mp4':
-            case 'webm':
-            case 'mov':
-                await downloadDirectVideo(videoUrl, videoId, videoFormat);
-                break;
-            case 'm3u8':
-                await downloadM3U8Video(videoUrl, videoId);
+        switch (platform) {
+            case 'youtube':
+            case 'bilibili':
+                await downloadDirectVideo(videoUrl, videoId, 'mp4');
                 break;
             default:
-                throw new Error('不支持的视频格式');
+                const videoFormat = getVideoFormat(videoUrl);
+                if (videoFormat === 'm3u8') {
+                    await downloadM3U8Video(videoUrl, videoId);
+                } else {
+                    await downloadDirectVideo(videoUrl, videoId, videoFormat);
+                }
         }
         
         showSuccess('下载开始！');
@@ -319,6 +384,35 @@ async function downloadM3U8Video(m3u8Url, videoId) {
 
     } catch (error) {
         throw new Error(`M3U8视频处理失败: ${error.message}`);
+    }
+}
+
+async function downloadPlatformVideo(videoUrl, videoId, platform) {
+    try {
+        const response = await fetch(`/api/download-${platform}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ url: videoUrl, videoId })
+        });
+
+        if (!response.ok) {
+            throw new Error(`${platform}视频下载失败`);
+        }
+
+        // 处理下载响应
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `video_${videoId}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        throw new Error(`${platform}视频下载失败: ${error.message}`);
     }
 }
 
