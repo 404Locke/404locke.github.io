@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Video Downloader</title>
+    <style>
+        body {
+            width: 100%;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .url-input-container {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .url-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .analyze-btn {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .analyze-btn:hover {
+            background-color: #45a049;
+        }
+        .video-list {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 20px;
+        }
+        .video-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .video-item:last-child {
+            border-bottom: none;
+        }
+        .download-btn {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: auto;
+        }
+        .download-btn:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Video Downloader</h1>
+        </div>
+        <div class="url-input-container">
+            <input type="text" class="url-input" id="videoUrl" placeholder="请输入视频页面URL">
+            <button class="analyze-btn" id="analyzeBtn">分析</button>
+        </div>
+        <div class="video-list" id="videoList">
+            <!-- 视频列表将通过 JavaScript 动态添加 -->
+        </div>
+    </div>
+    <script src="page.js"></script>
+</body>
+</html> 
