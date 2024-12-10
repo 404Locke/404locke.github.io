@@ -7,10 +7,18 @@
     "contextMenus",
     "downloads",
     "activeTab",
-    "tabs"
+    "tabs",
+    "storage",
+    "webRequest",
+    "cookies"
+  ],
+  "host_permissions": [
+    "<all_urls>",
+    "*://*/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [{
     "matches": ["<all_urls>"],

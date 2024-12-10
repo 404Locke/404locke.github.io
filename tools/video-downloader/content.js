@@ -2,6 +2,53 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'analyzeVideo') {
         const videos = findVideos();
         sendResponse({ videos });
+        return true;
+    }
+    else if (request.action === 'getHeaders') {
+        // 获取当前页面的请求头
+        const rawHeaders = {
+            'User-Agent': window.navigator.userAgent,
+            'Referer': document.location.href,
+            'Origin': document.location.origin,
+            'Cookie': document.cookie,
+            'Accept': '*/*',
+            'Accept-Language': navigator.language,
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Pragma': 'no-cache',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'cross-site'
+        };
+
+        // 过滤和清理 headers
+        const headers = {};
+        for (let [key, value] of Object.entries(rawHeaders)) {
+            try {
+                // 检查是否包含非 ASCII 字符
+                if (/^[\x00-\x7F]*$/.test(value)) {
+                    headers[key] = value;
+                } else {
+                    // 如果包含非 ASCII 字符，尝试编码或移除
+                    headers[key] = value.replace(/[^\x00-\x7F]/g, '');
+                }
+            } catch (e) {
+                console.warn(`跳过无效的header: ${key}`);
+            }
+        }
+
+        // 获取 meta 标签中的信息
+        const metaTags = document.getElementsByTagName('meta');
+        for (let meta of metaTags) {
+            const name = meta.getAttribute('name');
+            const content = meta.getAttribute('content');
+            if (name && content && /^[\x00-\x7F]*$/.test(content)) {
+                headers[name] = content;
+            }
+        }
+
+        sendResponse({ headers: headers });
+        return true;
     }
 });
 
