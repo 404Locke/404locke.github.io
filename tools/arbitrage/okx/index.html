@@ -213,7 +213,7 @@
 
         async function fetchArbitrageData(selectedDate) {
             NProgress.start();
-            const newTableData = []; // 使用新的数组存储新数据，而不是直接清空原来的数据
+            const newTableData = [];
             
             try {
                 for (const symbol of SYMBOLS) {
@@ -239,7 +239,7 @@
                             const dailyProfit = (10000 * apr / 365) / 100;
 
                             newTableData.push({
-                                symbol: `${symbol}-USD`,
+                                symbol: symbol,
                                 spotPrice,
                                 futuresPrice,
                                 spread,
