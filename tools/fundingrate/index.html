@@ -29,11 +29,20 @@
             margin-bottom: -1px;
             position: relative;
             z-index: 1;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .tabs::-webkit-scrollbar {
+            display: none;
         }
 
         .tab {
-            flex: 1;
-            padding: 10px;
+            flex: 0 0 auto;
+            padding: 10px 15px;
             text-align: center;
             background: #f8f9fa;
             border: none;
@@ -42,25 +51,43 @@
             color: #666;
             transition: all 0.2s;
             white-space: nowrap;
+            min-width: max-content;
         }
 
-        .tab:first-child {
-            border-radius: 8px 0 0 0;
+        @media screen and (max-width: 768px) {
+            body {
+                padding: 5px;
+            }
+
+            .container {
+                height: calc(100vh - 10px);
+            }
+
+            .tab {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+
+            .iframe-container {
+                border-radius: 0 0 6px 6px;
+            }
         }
 
-        .tab:last-child {
-            border-radius: 0 8px 0 0;
+        .tabs::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 30px;
+            height: 100%;
+            background: linear-gradient(to right, transparent, rgba(224, 224, 224, 0.8));
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
         }
 
-        .tab.active {
-            background: white;
-            color: #007bff;
-            font-weight: 500;
-        }
-
-        .tab:hover:not(.active) {
-            background: #fff;
-            color: #333;
+        .tabs.has-scroll::after {
+            opacity: 1;
         }
 
         .iframe-container {
@@ -90,6 +117,7 @@
             <button class="tab" data-url="https://www.coinglass.com/FundingRateHeatMap">资金费热力图</button>
             <button class="tab" data-url="https://www.coinglass.com/pro/futures/LiquidationMap">清算地图</button>
             <button class="tab" data-url="https://www.coinglass.com/pro/futures/LiquidationHeatMap">清算热力图</button>
+            <button class="tab" data-url="https://velo.xyz/market">Velo Market</button>
             <button class="tab" data-url="https://defillama.com/cexs">交易所透明度</button>
         </div>
         
@@ -102,16 +130,36 @@
         document.addEventListener('DOMContentLoaded', function() {
             const tabs = document.querySelectorAll('.tab');
             const iframe = document.querySelector('iframe');
+            const tabsContainer = document.querySelector('.tabs');
+
+            function checkScroll() {
+                if (tabsContainer.scrollWidth > tabsContainer.clientWidth) {
+                    tabsContainer.classList.add('has-scroll');
+                } else {
+                    tabsContainer.classList.remove('has-scroll');
+                }
+            }
+
+            checkScroll();
+            window.addEventListener('resize', checkScroll);
+
+            tabsContainer.addEventListener('scroll', function() {
+                if (tabsContainer.scrollLeft + tabsContainer.clientWidth >= tabsContainer.scrollWidth - 10) {
+                    tabsContainer.classList.remove('has-scroll');
+                } else {
+                    tabsContainer.classList.add('has-scroll');
+                }
+            });
 
             tabs.forEach(tab => {
                 tab.addEventListener('click', function() {
-                    // 更新标签状态
                     tabs.forEach(t => t.classList.remove('active'));
                     this.classList.add('active');
 
-                    // 重新加载iframe内容
                     const url = this.dataset.url;
                     iframe.src = url;
+
+                    this.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                 });
             });
         });
