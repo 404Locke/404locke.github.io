@@ -53,6 +53,20 @@
             white-space: nowrap;
         }
 
+        /* 添加选中状态的样式 */
+        .tab.active {
+            background: white;
+            color: #007bff;
+            font-weight: 500;
+            box-shadow: 0 -2px 0 #007bff inset;
+        }
+
+        /* 添加悬停效果 */
+        .tab:hover:not(.active) {
+            background: #fff;
+            color: #333;
+        }
+
         @media screen and (max-width: 768px) {
             .tab {
                 flex: 0 0 auto;
@@ -147,6 +161,26 @@
             const iframe = document.querySelector('iframe');
             const tabsContainer = document.querySelector('.tabs');
 
+            // 从 URL hash 获取选中的 URL，如果没有则使用默认值
+            function getSelectedUrl() {
+                const hash = decodeURIComponent(window.location.hash.slice(1));
+                if (hash && Array.from(tabs).some(tab => tab.dataset.url === hash)) {
+                    return hash;
+                }
+                return 'https://www.coinglass.com/FundingRate#btc';
+            }
+            
+            // 初始化时设置正确的 tab 和 iframe
+            const selectedUrl = getSelectedUrl();
+            tabs.forEach(tab => {
+                if (tab.dataset.url === selectedUrl) {
+                    tab.classList.add('active');
+                    iframe.src = selectedUrl;
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+
             function checkScroll() {
                 if (tabsContainer.scrollWidth > tabsContainer.clientWidth) {
                     tabsContainer.classList.add('has-scroll');
@@ -173,8 +207,24 @@
 
                     const url = this.dataset.url;
                     iframe.src = url;
+                    
+                    // 更新 URL hash
+                    window.location.hash = encodeURIComponent(url);
 
                     this.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                });
+            });
+
+            // 监听 hash 变化，以支持浏览器前进后退
+            window.addEventListener('hashchange', function() {
+                const newUrl = getSelectedUrl();
+                tabs.forEach(tab => {
+                    if (tab.dataset.url === newUrl) {
+                        tab.classList.add('active');
+                        iframe.src = newUrl;
+                    } else {
+                        tab.classList.remove('active');
+                    }
                 });
             });
         });
