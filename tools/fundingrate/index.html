@@ -41,7 +41,7 @@
         }
 
         .tab {
-            flex: 0 0 auto;
+            flex: 1;
             padding: 10px 15px;
             text-align: center;
             background: #f8f9fa;
@@ -51,10 +51,28 @@
             color: #666;
             transition: all 0.2s;
             white-space: nowrap;
-            min-width: max-content;
         }
 
         @media screen and (max-width: 768px) {
+            .tab {
+                flex: 0 0 auto;
+                padding: 8px 12px;
+                font-size: 13px;
+                min-width: max-content;
+            }
+
+            .tabs {
+                overflow-x: auto;
+                overflow-y: hidden;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+
+            .tabs::-webkit-scrollbar {
+                display: none;
+            }
+
             body {
                 padding: 5px;
             }
@@ -63,31 +81,28 @@
                 height: calc(100vh - 10px);
             }
 
-            .tab {
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-
             .iframe-container {
                 border-radius: 0 0 6px 6px;
             }
         }
 
-        .tabs::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 30px;
-            height: 100%;
-            background: linear-gradient(to right, transparent, rgba(224, 224, 224, 0.8));
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
+        @media screen and (max-width: 768px) {
+            .tabs::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 30px;
+                height: 100%;
+                background: linear-gradient(to right, transparent, rgba(224, 224, 224, 0.8));
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
 
-        .tabs.has-scroll::after {
-            opacity: 1;
+            .tabs.has-scroll::after {
+                opacity: 1;
+            }
         }
 
         .iframe-container {
