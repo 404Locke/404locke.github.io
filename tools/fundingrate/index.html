@@ -160,6 +160,12 @@
             const tabs = document.querySelectorAll('.tab');
             const iframe = document.querySelector('iframe');
             const tabsContainer = document.querySelector('.tabs');
+            const baseTitle = '费率查询&市场数据';
+
+            // 更新页面标题
+            function updateTitle(tab) {
+                document.title = `${tab.textContent} - ${baseTitle}`;
+            }
 
             // 从 URL hash 获取选中的 URL，如果没有则使用默认值
             function getSelectedUrl() {
@@ -176,6 +182,7 @@
                 if (tab.dataset.url === selectedUrl) {
                     tab.classList.add('active');
                     iframe.src = selectedUrl;
+                    updateTitle(tab);
                 } else {
                     tab.classList.remove('active');
                 }
@@ -210,6 +217,9 @@
                     
                     // 更新 URL hash
                     window.location.hash = encodeURIComponent(url);
+                    
+                    // 更新页面标题
+                    updateTitle(this);
 
                     this.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                 });
@@ -222,6 +232,7 @@
                     if (tab.dataset.url === newUrl) {
                         tab.classList.add('active');
                         iframe.src = newUrl;
+                        updateTitle(tab);
                     } else {
                         tab.classList.remove('active');
                     }
