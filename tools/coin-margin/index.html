@@ -33,11 +33,12 @@
             gap: 20px;
         }
 
-        .input-panel, .chart-panel {
+        .input-panel {
             background: white;
             padding: 20px;
             border-radius: 12px;
             box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 0;
         }
 
         .form-group {
@@ -73,13 +74,32 @@
         }
 
         .results {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
+            background: white;
+            padding: 0 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            height: auto;
+            box-sizing: border-box;
+            width: 100%;
+            margin-top: 0;
+            overflow: hidden;
+        }
+
+        .results h3 {
+            margin-top: 15px;
+            margin-bottom: 15px;
+            color: var(--text-primary);
+            font-weight: 500;
         }
 
         .result-item {
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            word-wrap: break-word;
+            white-space: normal;
+        }
+
+        .result-item:last-child {
+            margin-bottom: 15px;
         }
 
         .input-group {
@@ -223,23 +243,6 @@
             flex: 1;
         }
 
-        .results {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            height: auto;
-            box-sizing: border-box;
-            width: 100%;
-        }
-
-        .results h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-
         .contracts-section {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -259,7 +262,7 @@
             box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
             width: 100%;
             box-sizing: border-box;
-            margin-bottom: 20px;
+            margin-top: 0;
         }
 
         .contract-pnl {
@@ -316,27 +319,17 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            height: 160px;
+            height: 200px;
             box-sizing: border-box;
-        }
-
-        .capital-results {
-            gap: 25px;
-            align-items: stretch;
         }
 
         .results {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            height: 160px;
-            box-sizing: border-box;
-            width: 100%;
+            padding: 0 20px;
+            overflow: hidden;
         }
 
         .results h3 {
-            margin-top: 0;
+            margin-top: 15px;
             margin-bottom: 15px;
             color: var(--text-primary);
             font-weight: 500;
@@ -347,7 +340,7 @@
         }
 
         .result-item:last-child {
-            margin-bottom: 0;
+            margin-bottom: 15px;
         }
 
         .initial-usd {
@@ -550,6 +543,11 @@
                             <span id="usdPnl">0.00</span> USD
                             (<span id="usdPnlPercentage">0.00</span>%)
                         </div>
+                        <div class="result-item">
+                            <strong>一年资金率收益(USD)：</strong>
+                            <span id="fundingPnl">0.00</span> USD
+                            (<span id="fundingPnlPercentage">0.00</span>%)
+                        </div>
                     </div>
                 </div>
             </div>
@@ -723,6 +721,22 @@
             const finalUsdValue = finalBtc * perpetualClose;       // 最终总资金U本位价值（按永续合约价格）
             const usdPnl = finalUsdValue - initialUsdValue;        // 相对于初始资金净盈亏
             const usdPnlPercentage = (usdPnl / initialUsdValue) * 100;  // 百分比
+
+            // 计算资金率收益
+            const annualRate = 0.12;  // 12%年化
+            const fundingPnl = perpetualSize * annualRate * 1 / 365;  // 资金率收益 = 合约价值 * 日化资金率 * 持仓天数 * 方向系数
+            
+            // 计算资金率收益的百分比（相对于合约价值）
+            const fundingPnlPercentage = (fundingPnl / (perpetualSize * perpetualOpen)) * 100;
+
+            // 更新资金率收益显示
+            const fundingPnlElement = document.getElementById('fundingPnl');
+            fundingPnlElement.textContent = (fundingPnl >= 0 ? '+' : '') + fundingPnl.toFixed(2);
+            fundingPnlElement.style.color = fundingPnl >= 0 ? 'green' : 'red';
+
+            const fundingPnlPercentageElement = document.getElementById('fundingPnlPercentage');
+            fundingPnlPercentageElement.textContent = (fundingPnlPercentage >= 0 ? '+' : '') + fundingPnlPercentage.toFixed(2);
+            fundingPnlPercentageElement.style.color = fundingPnl >= 0 ? 'green' : 'red';
 
             // 更新总盈亏显示
             document.getElementById('finalBtc').textContent = finalBtc.toFixed(4);
@@ -1114,7 +1128,7 @@
             setupSlider('perpetualCloseRange');
             setupSlider('quarterlyCloseRange');
 
-            // 移除旧的事件监听代码，添加新的事件监听
+            // 移除旧的事件监听代码添加新的事件监听
             const directionRadios = document.querySelectorAll('input[name="perpetualDirection"], input[name="quarterlyDirection"]');
             directionRadios.forEach(radio => {
                 // 使用 input 事件
@@ -1156,11 +1170,11 @@
 
         Chart.register(ChartDataLabels);
 
-        // 确保在永续合约开仓��格改变时更新USD金额
+        // 确保在永续合约开仓价格改变时更新USD金额
         document.getElementById('perpetualOpen').addEventListener('input', calculateResults);
         document.getElementById('perpetualOpenRange').addEventListener('input', calculateResults);
 
-        // 添加一个函数来强制更新
+        // 添加一个��数来强制更新
         function forceUpdate() {
             calculateResults();
             updateChart();
