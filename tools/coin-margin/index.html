@@ -236,7 +236,7 @@
 
         .capital-results {
             display: block;
-            margin-top: 25px;
+            margin-top: 0px;
         }
 
         .capital-section {
@@ -399,6 +399,26 @@
             gap: 20px;
             width: 100%;
         }
+
+        .capital-results {
+            gap: 25px;
+            align-items: stretch;
+        }
+
+        .capital-section .form-group,
+        .results {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            height: 200px;
+            box-sizing: border-box;
+        }
+
+        .results {
+            padding: 0 20px;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body>
@@ -439,8 +459,8 @@
                         <div class="size-input">
                             <label>合约数量 (BTC)</label>
                             <div class="input-wrapper">
-                                <input type="number" id="perpetualSize" step="0.1" value="1">
-                                <input type="range" id="perpetualSizeRange" min="0" max="10" step="0.1" value="1">
+                                <input type="number" id="perpetualSize" step="0.1" value="10">
+                                <input type="range" id="perpetualSizeRange" min="0" max="10" step="0.1" value="10">
                             </div>
                             <label>平仓价格 (USD)</label>
                             <div class="input-wrapper">
@@ -498,8 +518,8 @@
                         <div class="size-input">
                             <label>合约数量 (BTC)</label>
                             <div class="input-wrapper">
-                                <input type="number" id="quarterlySize" step="0.1" value="1">
-                                <input type="range" id="quarterlySizeRange" min="0" max="10" step="0.1" value="1">
+                                <input type="number" id="quarterlySize" step="0.1" value="10">
+                                <input type="range" id="quarterlySizeRange" min="0" max="10" step="0.1" value="10">
                             </div>
                             <label>平仓价格 (USD)</label>
                             <div class="input-wrapper">
@@ -544,9 +564,12 @@
                             (<span id="usdPnlPercentage">0.00</span>%)
                         </div>
                         <div class="result-item">
-                            <strong>一年资金率收益(USD)：</strong>
-                            <span id="fundingPnl">0.00</span> USD
-                            (<span id="fundingPnlPercentage">0.00</span>%)
+                            <strong>半年资金率收益：</strong>
+                            <span id="fundingPnl">0.0000</span> BTC
+                            (<span id="fundingPnlPercentage">0.00</span>%) /
+                            <span id="fundingPnlBtc">0.0000</span> × <span id="fundingPnlPrice">0</span> = 
+                            <span id="fundingPnlUsd">0.00</span> USD
+                            (<span id="fundingPnlUsdPercentage">0.00</span>%)
                         </div>
                     </div>
                 </div>
@@ -579,7 +602,7 @@
                 this.quarterlyCapital = quarterlyCapital;
             }
 
-            // 计算币本位盈亏
+            // 计算币本位盈��
             calculateBtcPnl(direction, openPrice, closePrice, size) {
                 if (direction === 'short') {
                     // 空单币本位盈亏 = size * (开仓价格/平仓价格 - 1)
@@ -612,7 +635,7 @@
                 const finalBtc = capital + btcPnl;
 
                 // 计算相对初始资金的U本位盈亏
-                const initialUsdValue = capital * 100000;  // 使用永续合约价格计算初始价值
+                const initialUsdValue = capital * 100000;  // 使用永续合约价格计算初始值
                 const finalUsdValue = finalBtc * closePrice;  // 使用平仓价格计算最终价值
                 const totalPnl = finalUsdValue - initialUsdValue;
 
@@ -722,25 +745,42 @@
             const usdPnl = finalUsdValue - initialUsdValue;        // 相对于初始资金净盈亏
             const usdPnlPercentage = (usdPnl / initialUsdValue) * 100;  // 百分比
 
-            // 计算资金率收益
+            // 计算半年资金率收益（币本位）
             const annualRate = 0.12;  // 12%年化
-            const contractValue = perpetualSize * perpetualOpen;  // 合约U本位价值
+            const halfYearRate = annualRate / 2;  // 半年利率
+            const contractBtcValue = perpetualSize;  // 合约币本位价值
             const directionMultiplier = perpetualDirection === 'long' ? -1 : 1;  // 多头付钱，空头赚钱
-            const fundingPnl = contractValue * annualRate * directionMultiplier;  // 一年的资金率收益
+            const fundingPnl = contractBtcValue * halfYearRate * directionMultiplier;  // 半年的资金率收益（BTC）
 
-            // 计算资金率收益的百分比（相对于总投入本金的U本位价值）
-            const totalInitialCapital = perpetualCapital + quarterlyCapital;  // 总投入本金
-            const totalInitialMarginValue = totalInitialCapital * perpetualOpen;  // 总投入本金的U本位价值
-            const fundingPnlPercentage = (fundingPnl / totalInitialMarginValue) * 100;
+            // 计算资金率收益的百分比（相对于总投入本金）
+            const totalInitialCapital = perpetualCapital + quarterlyCapital;  // 总投入本金（BTC）
+            const fundingPnlPercentage = (fundingPnl / totalInitialCapital) * 100;
+
+            // 计算资金率收益的USD价值（按平仓价格）
+            const fundingPnlUsd = fundingPnl * perpetualClose;  // 使用永续合约平仓价格
+            const totalInitialUsdValue = totalInitialCapital * perpetualOpen;  // 总投入本金的U本位价值
+            const fundingPnlUsdPercentage = (fundingPnlUsd / totalInitialUsdValue) * 100;
 
             // 更新资金率收益显示
             const fundingPnlElement = document.getElementById('fundingPnl');
-            fundingPnlElement.textContent = (fundingPnl >= 0 ? '+' : '') + fundingPnl.toFixed(2);
+            fundingPnlElement.textContent = (fundingPnl >= 0 ? '+' : '') + fundingPnl.toFixed(4);
             fundingPnlElement.style.color = fundingPnl >= 0 ? 'green' : 'red';
 
             const fundingPnlPercentageElement = document.getElementById('fundingPnlPercentage');
             fundingPnlPercentageElement.textContent = (fundingPnlPercentage >= 0 ? '+' : '') + fundingPnlPercentage.toFixed(2);
             fundingPnlPercentageElement.style.color = fundingPnl >= 0 ? 'green' : 'red';
+
+            // 显示计算过程
+            document.getElementById('fundingPnlBtc').textContent = (fundingPnl >= 0 ? '+' : '') + fundingPnl.toFixed(4);
+            document.getElementById('fundingPnlPrice').textContent = perpetualClose.toLocaleString();
+
+            const fundingPnlUsdElement = document.getElementById('fundingPnlUsd');
+            fundingPnlUsdElement.textContent = (fundingPnlUsd >= 0 ? '+' : '') + fundingPnlUsd.toFixed(2);
+            fundingPnlUsdElement.style.color = fundingPnlUsd >= 0 ? 'green' : 'red';
+
+            const fundingPnlUsdPercentageElement = document.getElementById('fundingPnlUsdPercentage');
+            fundingPnlUsdPercentageElement.textContent = (fundingPnlUsdPercentage >= 0 ? '+' : '') + fundingPnlUsdPercentage.toFixed(2);
+            fundingPnlUsdPercentageElement.style.color = fundingPnlUsd >= 0 ? 'green' : 'red';
 
             // 更新总盈亏显示
             document.getElementById('finalBtc').textContent = finalBtc.toFixed(4);
@@ -902,7 +942,7 @@
                             const totalHeight = chartArea.bottom - chartArea.top;
                             const zeroPercentage = (chartArea.bottom - zeroLinePos) / totalHeight;
                             
-                            // 亏损区域在0点以下（红色），盈利区域在0点以上（绿色）
+                            // 亏损区域0点以下（红色），盈利区域在0点以上（绿色）
                             gradient.addColorStop(0, 'rgba(255, 99, 132, 0.1)');   // 亏损区域 - 浅红色
                             gradient.addColorStop(zeroPercentage, 'rgba(255, 99, 132, 0.1)'); // 亏损区域 - 浅红色
                             gradient.addColorStop(zeroPercentage, 'rgba(75, 192, 192, 0.1)'); // 盈利区域 - 浅绿色
