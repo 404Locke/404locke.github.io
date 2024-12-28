@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>币本位合约套利计算器</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --hover-color: #2980b9;
+            --text-primary: #2c3e50;
+            --text-secondary: #666;
+            --bg-color: #f8f9fa;
+            --border-color: #ddd;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+        }
+
+        .calculator-container {
+            max-width: none;
+            margin: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .input-panel, .chart-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text-primary);
+        }
+
+        .results {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .result-item {
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .contracts-section,
+            .capital-results {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 0;
+            height: 4px;
+            background: linear-gradient(to right, var(--primary-color) 0%, var(--primary-color) 50%, #ddd 50%, #ddd 100%);
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid var(--primary-color);
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            transition: all .15s ease-in-out;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            background: var(--primary-color);
+        }
+
+        input[type="range"]::-webkit-slider-thumb:active {
+            transform: scale(0.95);
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 2.5;
+            margin-bottom: 0;
+        }
+
+        .direction-switch {
+            width: 50%;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            background: #f5f5f5;
+            padding: 8px;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .form-group label {
+            margin-right: 0;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        .radio-label input[type="radio"] {
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .radio-label span {
+            color: var(--text-primary);
+        }
+
+        input[type="number"]::placeholder {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        .contract-section {
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
+            border-top: none;
+            padding-top: 0;
+            margin-top: 0;
+        }
+
+        .contract-section:last-child {
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+
+        .size-input {
+            margin-top: 10px;
+            padding-top: 10px;
+        }
+
+        .form-groups-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .capital-results {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .capital-section {
+            flex: 1;
+        }
+
+        .results {
+            flex: 2;
+            margin-top: 0;
+            padding-top: 0;
+            border-top: none;
+        }
+
+        .results h3 {
+            margin-top: 0;
+        }
+
+        .contracts-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .contracts-section .contract-section {
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .chart-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .contract-pnl {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .contract-pnl .result-item {
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .initial-usd {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator-container">
+        <div class="input-panel">
+            <h2>参数设置</h2>
+            <div class="form-groups-container">
+                <div class="contracts-section">
+                    <div class="form-group contract-section">
+                        <label>永续合约开仓价格 (USD)</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="perpetualOpen" value="96403">
+                            <div class="direction-switch">
+                                <label class="radio-label">
+                                    <input type="radio" name="perpetualDirection" value="short" checked>
+                                    <span>空</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="perpetualDirection" value="long">
+                                    <span>多</span>
+                                </label>
+                            </div>
+                        </div>
+                        <input type="range" id="perpetualOpenRange" min="50000" max="150000" step="100" value="96403">
+                        <div class="size-input">
+                            <label>合约数量 (BTC)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="perpetualSize" step="0.1" value="1">
+                                <input type="range" id="perpetualSizeRange" min="0" max="5" step="0.1" value="1">
+                            </div>
+                            <label>平仓价格 (USD)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="perpetualClose" value="100000">
+                                <input type="range" id="perpetualCloseRange" min="50000" max="150000" step="100" value="100000">
+                            </div>
+                            <div class="contract-pnl">
+                                <div class="result-item">
+                                    <strong>币本位盈亏：</strong> 
+                                    <span id="perpetualBtcPnl">0.0000</span> BTC
+                                    (<span id="perpetualBtcPnlPercentage">0.00</span>%)
+                                </div>
+                                <div class="result-item">
+                                    <strong>U本位盈亏：</strong>
+                                    <span id="perpetualUsdPnl">0.00</span> USD
+                                    (<span id="perpetualUsdPnlPercentage">0.00</span>%)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group contract-section">
+                        <label>季度合约开仓价格 (USD)</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="quarterlyOpen" value="102219.3">
+                            <div class="direction-switch">
+                                <label class="radio-label">
+                                    <input type="radio" name="quarterlyDirection" value="short">
+                                    <span>空</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="quarterlyDirection" value="long" checked>
+                                    <span>多</span>
+                                </label>
+                            </div>
+                        </div>
+                        <input type="range" id="quarterlyOpenRange" min="50000" max="150000" step="100" value="102219.3">
+                        <div class="size-input">
+                            <label>合约数量 (BTC)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="quarterlySize" step="0.1" value="1">
+                                <input type="range" id="quarterlySizeRange" min="0" max="5" step="0.1" value="1">
+                            </div>
+                            <label>平仓价格 (USD)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="quarterlyClose" value="100000">
+                                <input type="range" id="quarterlyCloseRange" min="50000" max="150000" step="100" value="100000">
+                            </div>
+                            <div class="contract-pnl">
+                                <div class="result-item">
+                                    <strong>币本位盈亏：</strong> 
+                                    <span id="quarterlyBtcPnl">0.0000</span> BTC
+                                    (<span id="quarterlyBtcPnlPercentage">0.00</span>%)
+                                </div>
+                                <div class="result-item">
+                                    <strong>U本位盈亏：</strong>
+                                    <span id="quarterlyUsdPnl">0.00</span> USD
+                                    (<span id="quarterlyUsdPnlPercentage">0.00</span>%)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="capital-results">
+                    <div class="capital-section">
+                        <div class="form-group">
+                            <label>初始本金 (BTC)</label>
+                            <input type="number" id="initialCapital" step="0.1" value="2">
+                            <input type="range" id="initialCapitalRange" min="0" max="10" step="0.1" value="2">
+                        </div>
+                        <div class="initial-usd">
+                            <strong>初始USD金额：</strong> <span id="initialUsdValue">0.00</span> USD
+                        </div>
+                    </div>
+                    <div class="results">
+                        <h3>计算结果</h3>
+                        <div class="result-item">
+                            <strong>当前BTC持仓：</strong> <span id="finalBtc">2.0000</span> BTC
+                        </div>
+                        <div class="result-item">
+                            <strong>币本位盈亏(BTC)：</strong> 
+                            <span id="btcPnl">0.0000</span> BTC
+                            (<span id="btcPnlPercentage">0.00</span>%)
+                        </div>
+                        <div class="result-item">
+                            <strong>净盈亏(USD)：</strong>
+                            <span id="usdPnl">0.00</span> USD
+                            (<span id="usdPnlPercentage">0.00</span>%)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-panel">
+            <div class="chart-container">
+                <canvas id="btcPnlChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-panel">
+            <div class="chart-container">
+                <canvas id="usdPnlChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let btcChart = null;
+        let usdChart = null;
+
+        function calculateResults() {
+            const initialCapital = parseFloat(document.getElementById('initialCapital').value);
+            const perpetualOpen = parseFloat(document.getElementById('perpetualOpen').value);
+            const quarterlyOpen = parseFloat(document.getElementById('quarterlyOpen').value);
+            const perpetualSize = parseFloat(document.getElementById('perpetualSize').value);
+            const quarterlySize = parseFloat(document.getElementById('quarterlySize').value);
+            const perpetualClose = parseFloat(document.getElementById('perpetualClose').value);
+            const quarterlyClose = parseFloat(document.getElementById('quarterlyClose').value);
+            
+            // 获取合约方向
+            const perpetualDirection = document.querySelector('input[name="perpetualDirection"]:checked').value;
+            const quarterlyDirection = document.querySelector('input[name="quarterlyDirection"]:checked').value;
+
+            // 计算永续合约的盈亏
+            const perpetualBtcPnl = perpetualDirection === 'short' 
+                ? (perpetualOpen - perpetualClose) / perpetualClose * perpetualSize
+                : (perpetualClose - perpetualOpen) / perpetualClose * perpetualSize;
+            
+            const perpetualBtcPnlPercentage = (perpetualBtcPnl / perpetualSize) * 100;
+            const perpetualInitialUsd = perpetualSize * perpetualOpen;
+            const perpetualFinalUsd = (perpetualSize + perpetualBtcPnl) * perpetualClose;
+            const perpetualUsdPnl = perpetualFinalUsd - perpetualInitialUsd;
+            const perpetualUsdPnlPercentage = (perpetualUsdPnl / perpetualInitialUsd) * 100;
+
+            // 计算季度合约的盈亏
+            const quarterlyBtcPnl = quarterlyDirection === 'short'
+                ? (quarterlyOpen - quarterlyClose) / quarterlyOpen * quarterlySize
+                : (quarterlyClose - quarterlyOpen) / quarterlyOpen * quarterlySize;
+            
+            const quarterlyBtcPnlPercentage = (quarterlyBtcPnl / quarterlySize) * 100;
+            const quarterlyInitialUsd = quarterlySize * quarterlyOpen;
+            const quarterlyFinalUsd = (quarterlySize + quarterlyBtcPnl) * quarterlyClose;
+            const quarterlyUsdPnl = quarterlyFinalUsd - quarterlyInitialUsd;
+            const quarterlyUsdPnlPercentage = (quarterlyUsdPnl / quarterlyInitialUsd) * 100;
+
+            // 更新永续合约显示
+            updatePnlDisplay('perpetualBtcPnl', 'perpetualBtcPnlPercentage', 
+                            'perpetualUsdPnl', 'perpetualUsdPnlPercentage',
+                            perpetualBtcPnl, perpetualBtcPnlPercentage,
+                            perpetualUsdPnl, perpetualUsdPnlPercentage);
+
+            // 更新季度合约显示
+            updatePnlDisplay('quarterlyBtcPnl', 'quarterlyBtcPnlPercentage',
+                            'quarterlyUsdPnl', 'quarterlyUsdPnlPercentage',
+                            quarterlyBtcPnl, quarterlyBtcPnlPercentage,
+                            quarterlyUsdPnl, quarterlyUsdPnlPercentage);
+
+            const finalBtc = initialCapital + perpetualBtcPnl + quarterlyBtcPnl;
+            const btcPnl = finalBtc - initialCapital;
+            const btcPnlPercentage = (btcPnl / initialCapital) * 100;
+
+            // 修改 USD 盈亏的计算
+            const initialUsdValue = initialCapital * perpetualOpen; // 初始USD价值
+            const finalUsdValue = finalBtc * perpetualClose;       // 最终USD价值
+            const usdPnl = finalUsdValue - initialUsdValue;
+            const usdPnlPercentage = (usdPnl / initialUsdValue) * 100;
+
+            // 更新显示
+            document.getElementById('finalBtc').textContent = finalBtc.toFixed(4);
+            
+            const btcPnlElement = document.getElementById('btcPnl');
+            btcPnlElement.textContent = (btcPnl >= 0 ? '+' : '') + btcPnl.toFixed(4);
+            btcPnlElement.style.color = btcPnl >= 0 ? 'green' : 'red';
+            
+            const btcPnlPercentageElement = document.getElementById('btcPnlPercentage');
+            btcPnlPercentageElement.textContent = (btcPnlPercentage >= 0 ? '+' : '') + btcPnlPercentage.toFixed(2);
+            btcPnlPercentageElement.style.color = btcPnl >= 0 ? 'green' : 'red';
+
+            const usdPnlElement = document.getElementById('usdPnl');
+            usdPnlElement.textContent = (usdPnl >= 0 ? '+' : '') + usdPnl.toFixed(2);
+            usdPnlElement.style.color = usdPnl >= 0 ? 'green' : 'red';
+            
+            const usdPnlPercentageElement = document.getElementById('usdPnlPercentage');
+            usdPnlPercentageElement.textContent = (usdPnlPercentage >= 0 ? '+' : '') + usdPnlPercentage.toFixed(2);
+            usdPnlPercentageElement.style.color = usdPnl >= 0 ? 'green' : 'red';
+
+            updateChart();
+
+            // 更新初始USD金额显示
+            document.getElementById('initialUsdValue').textContent = initialUsdValue.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function updatePnlDisplay(btcPnlId, btcPnlPercentageId, usdPnlId, usdPnlPercentageId,
+                                 btcPnl, btcPnlPercentage, usdPnl, usdPnlPercentage) {
+            const btcPnlElement = document.getElementById(btcPnlId);
+            btcPnlElement.textContent = (btcPnl >= 0 ? '+' : '') + btcPnl.toFixed(4);
+            btcPnlElement.style.color = btcPnl >= 0 ? 'green' : 'red';
+
+            const btcPnlPercentageElement = document.getElementById(btcPnlPercentageId);
+            btcPnlPercentageElement.textContent = (btcPnlPercentage >= 0 ? '+' : '') + btcPnlPercentage.toFixed(2);
+            btcPnlPercentageElement.style.color = btcPnl >= 0 ? 'green' : 'red';
+
+            const usdPnlElement = document.getElementById(usdPnlId);
+            usdPnlElement.textContent = (usdPnl >= 0 ? '+' : '') + usdPnl.toFixed(2);
+            usdPnlElement.style.color = usdPnl >= 0 ? 'green' : 'red';
+
+            const usdPnlPercentageElement = document.getElementById(usdPnlPercentageId);
+            usdPnlPercentageElement.textContent = (usdPnlPercentage >= 0 ? '+' : '') + usdPnlPercentage.toFixed(2);
+            usdPnlPercentageElement.style.color = usdPnl >= 0 ? 'green' : 'red';
+        }
+
+        function updateChart() {
+            const initialCapital = parseFloat(document.getElementById('initialCapital').value);
+            const perpetualOpen = parseFloat(document.getElementById('perpetualOpen').value);
+            const quarterlyOpen = parseFloat(document.getElementById('quarterlyOpen').value);
+            const perpetualSize = parseFloat(document.getElementById('perpetualSize').value);
+            const quarterlySize = parseFloat(document.getElementById('quarterlySize').value);
+            
+            // 获取合约方向
+            const perpetualDirection = document.querySelector('input[name="perpetualDirection"]:checked').value;
+            const quarterlyDirection = document.querySelector('input[name="quarterlyDirection"]:checked').value;
+
+            const prices = [];
+            const btcPnls = [];
+            const usdPnls = [];
+            
+            for(let price = 50000; price <= 150000; price += 5000) {
+                const perpetualPnl = perpetualDirection === 'short'
+                    ? (perpetualOpen - price) / price * perpetualSize
+                    : (price - perpetualOpen) / price * perpetualSize;
+                
+                const quarterlyPnl = quarterlyDirection === 'short'
+                    ? (quarterlyOpen - price) / quarterlyOpen * quarterlySize
+                    : (price - quarterlyOpen) / quarterlyOpen * quarterlySize;
+
+                const finalBtc = initialCapital + perpetualPnl + quarterlyPnl;
+                const btcPnl = finalBtc - initialCapital;
+                
+                // 修改 USD 盈亏计算
+                const initialUsdValue = initialCapital * perpetualOpen;
+                const finalUsdValue = finalBtc * price;
+                const usdPnl = finalUsdValue - initialUsdValue;
+                
+                prices.push(price);
+                btcPnls.push(btcPnl);
+                usdPnls.push(usdPnl);
+            }
+
+            // 更新 BTC 盈亏图表
+            if (btcChart) {
+                btcChart.destroy();
+            }
+            const btcCtx = document.getElementById('btcPnlChart');
+            btcChart = new Chart(btcCtx, {
+                type: 'line',
+                data: {
+                    labels: prices,
+                    datasets: [{
+                        label: 'BTC盈亏',
+                        data: btcPnls,
+                        borderColor: 'rgb(75, 192, 192)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: {
+                            target: 'origin',
+                            above: 'rgba(75, 192, 192, 0.1)',
+                            below: 'rgba(255, 99, 132, 0.1)'
+                        },
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: 'white',
+                        pointBorderColor: 'rgb(75, 192, 192)',
+                        pointBorderWidth: 2,
+                        datalabels: {
+                            align: 'top',
+                            offset: 10,
+                            formatter: (value) => value.toFixed(4),
+                            font: {
+                                size: 9
+                            },
+                            rotation: 30
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        datalabels: {
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            borderRadius: 4,
+                            padding: {
+                                top: 2,
+                                right: 4,
+                                bottom: 2,
+                                left: 4
+                            },
+                            color: 'rgb(75, 192, 192)'
+                        },
+                        title: {
+                            display: true,
+                            text: 'BTC盈亏曲线'
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '平仓价格 (USD)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'BTC盈亏'
+                            },
+                            grid: {
+                                color: (context) => context.tick.value === 0 ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 更新 USD 盈亏图表
+            if (usdChart) {
+                usdChart.destroy();
+            }
+            const usdCtx = document.getElementById('usdPnlChart');
+            usdChart = new Chart(usdCtx, {
+                type: 'line',
+                data: {
+                    labels: prices,
+                    datasets: [{
+                        label: 'USD盈亏',
+                        data: usdPnls,
+                        borderColor: 'rgb(255, 99, 132)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: {
+                            target: 'origin',
+                            above: 'rgba(255, 99, 132, 0.1)',
+                            below: 'rgba(75, 192, 192, 0.1)'
+                        },
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: 'white',
+                        pointBorderColor: 'rgb(255, 99, 132)',
+                        pointBorderWidth: 2,
+                        datalabels: {
+                            align: 'top',
+                            offset: 10,
+                            formatter: (value) => value.toFixed(2),
+                            font: {
+                                size: 9
+                            },
+                            rotation: 30
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        datalabels: {
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            borderRadius: 4,
+                            padding: {
+                                top: 2,
+                                right: 4,
+                                bottom: 2,
+                                left: 4
+                            },
+                            color: 'rgb(255, 99, 132)'
+                        },
+                        title: {
+                            display: true,
+                            text: 'USD盈亏曲线'
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '平仓价格 (USD)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'USD盈亏'
+                            },
+                            grid: {
+                                color: (context) => context.tick.value === 0 ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function syncInputs(rangeId, numberId) {
+            const range = document.getElementById(rangeId);
+            const number = document.getElementById(numberId);
+            
+            range.addEventListener('input', () => {
+                number.value = range.value;
+                calculateResults();
+            });
+            
+            number.addEventListener('input', () => {
+                range.value = number.value;
+                calculateResults();
+            });
+        }
+
+        // 初始化
+        window.addEventListener('load', () => {
+            // 同步所有输入框
+            syncInputs('initialCapitalRange', 'initialCapital');
+            syncInputs('perpetualOpenRange', 'perpetualOpen');
+            syncInputs('quarterlyOpenRange', 'quarterlyOpen');
+            syncInputs('perpetualSizeRange', 'perpetualSize');
+            syncInputs('quarterlySizeRange', 'quarterlySize');
+            syncInputs('perpetualCloseRange', 'perpetualClose');
+            syncInputs('quarterlyCloseRange', 'quarterlyClose');
+
+            // 设置所有滑动条的背景
+            setupSlider('initialCapitalRange');
+            setupSlider('perpetualOpenRange');
+            setupSlider('quarterlyOpenRange');
+            setupSlider('perpetualSizeRange');
+            setupSlider('quarterlySizeRange');
+            setupSlider('perpetualCloseRange');
+            setupSlider('quarterlyCloseRange');
+
+            // 初始计算
+            calculateResults();
+
+            // 添加方向切换的事件监听
+            document.querySelectorAll('input[name="perpetualDirection"], input[name="quarterlyDirection"]')
+                .forEach(radio => {
+                    radio.addEventListener('change', calculateResults);
+                });
+
+            // 为季度合约数量添加事件监听
+            document.getElementById('quarterlySize').addEventListener('input', calculateResults);
+        });
+
+        function updateSliderBackground(slider) {
+            const min = slider.min;
+            const max = slider.max;
+            const val = slider.value;
+            const percentage = ((val - min) / (max - min)) * 100;
+            slider.style.background = `linear-gradient(to right, var(--primary-color) 0%, var(--primary-color) ${percentage}%, #ddd ${percentage}%, #ddd 100%)`;
+        }
+
+        function setupSlider(rangeId) {
+            const slider = document.getElementById(rangeId);
+            updateSliderBackground(slider);
+            slider.addEventListener('input', () => updateSliderBackground(slider));
+        }
+
+        Chart.register(ChartDataLabels);
+
+        // 确保在永续合约开仓价格改变时也更新USD金额
+        document.getElementById('perpetualOpen').addEventListener('input', calculateResults);
+        document.getElementById('perpetualOpenRange').addEventListener('input', calculateResults);
+    </script>
+</body>
+</html>
