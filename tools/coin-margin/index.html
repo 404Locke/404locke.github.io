@@ -724,10 +724,14 @@
 
             // 计算资金率收益
             const annualRate = 0.12;  // 12%年化
-            const fundingPnl = perpetualSize * annualRate * 1 / 365;  // 资金率收益 = 合约价值 * 日化资金率 * 持仓天数 * 方向系数
-            
-            // 计算资金率收益的百分比（相对于合约价值）
-            const fundingPnlPercentage = (fundingPnl / (perpetualSize * perpetualOpen)) * 100;
+            const contractValue = perpetualSize * perpetualOpen;  // 合约U本位价值
+            const directionMultiplier = perpetualDirection === 'long' ? -1 : 1;  // 多头付钱，空头赚钱
+            const fundingPnl = contractValue * annualRate * directionMultiplier;  // 一年的资金率收益
+
+            // 计算资金率收益的百分比（相对于总投入本金的U本位价值）
+            const totalInitialCapital = perpetualCapital + quarterlyCapital;  // 总投入本金
+            const totalInitialMarginValue = totalInitialCapital * perpetualOpen;  // 总投入本金的U本位价值
+            const fundingPnlPercentage = (fundingPnl / totalInitialMarginValue) * 100;
 
             // 更新资金率收益显示
             const fundingPnlElement = document.getElementById('fundingPnl');
@@ -1174,7 +1178,7 @@
         document.getElementById('perpetualOpen').addEventListener('input', calculateResults);
         document.getElementById('perpetualOpenRange').addEventListener('input', calculateResults);
 
-        // 添加一个��数来强制更新
+        // 添加一个数来强制更新
         function forceUpdate() {
             calculateResults();
             updateChart();
