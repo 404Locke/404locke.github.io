@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OKX Coin-Margined Futures Scanner</title>
+    <title>OKX U本位交割合约套利</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css">
@@ -89,7 +89,7 @@
 </head>
 <body>
     <div class="container">
-        <h2 class="text-center mb-4">OKX币本位交割合约套利</h2>
+        <h2 class="text-center mb-4">OKX U本位交割合约套利</h2>
         
         <!-- 交割日期选项卡 -->
         <ul class="nav nav-tabs delivery-date-tabs" id="deliveryDates">
@@ -99,7 +99,7 @@
         <!-- 交割合约套利表格 -->
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span>币本位交割合约套利</span>
+                <span>U本位交割合约套利</span>
                 <span class="refresh-time" id="futuresRefreshTime"></span>
             </div>
             <div class="card-body">
@@ -138,12 +138,12 @@
 
         async function getAvailableDeliveryDates() {
             try {
-                const response = await fetch(`${OKX_API_BASE}/api/v5/public/instruments?instType=FUTURES&uly=BTC-USD`);
+                const response = await fetch(`${OKX_API_BASE}/api/v5/public/instruments?instType=FUTURES&uly=BTC-USDT`);
                 const data = await response.json();
                 if (!data.data) return [];
                 
                 const dates = [...new Set(data.data
-                    .filter(item => item.instId.startsWith('BTC-USD-'))
+                    .filter(item => item.instId.startsWith('BTC-USDT-'))
                     .map(item => item.instId.split('-')[2])
                     .filter(date => date)
                 )];
@@ -220,7 +220,7 @@
                     try {
                         const [spotRes, futuresRes] = await Promise.all([
                             fetch(`${OKX_API_BASE}/api/v5/market/ticker?instId=${symbol}-USDT`),
-                            fetch(`${OKX_API_BASE}/api/v5/market/ticker?instId=${symbol}-USD-${selectedDate}`)
+                            fetch(`${OKX_API_BASE}/api/v5/market/ticker?instId=${symbol}-USDT-${selectedDate}`)
                         ]);
 
                         const [spotData, futuresData] = await Promise.all([
@@ -256,13 +256,10 @@
                     }
                 }
 
-                // 只有在成功获取到数据后才更新表格
                 if (newTableData.length > 0) {
-                    tableData = newTableData; // 更新全局的 tableData
+                    tableData = newTableData;
                     sortAndRenderTable();
                     updateRefreshTime();
-                } else {
-                    console.error('No valid data received');
                 }
             } catch (error) {
                 console.error('Error fetching data:', error);
