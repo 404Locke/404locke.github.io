@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>币本位合约套利</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0;
+        }
+        .tabs {
+            display: flex;
+            gap: 0;
+            background: white;
+            padding: 0;
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+            border-bottom: 1px solid #eee;
+        }
+        .tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            position: relative;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+        .tab:hover {
+            color: #2196F3;
+        }
+        .tab.active {
+            color: #2196F3;
+        }
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #2196F3;
+        }
+        .tab.disabled {
+            color: #ccc;
+            cursor: not-allowed;
+        }
+        .tab-content {
+            display: none;
+            background: white;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        iframe {
+            width: 100%;
+            height: 800px;
+            border: none;
+            background: white;
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+        .content-wrapper {
+            background: white;
+            border-radius: 0;
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="content-wrapper">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('binance')">Binance</button>
+                <button class="tab" onclick="switchTab('okx')">OKX</button>
+                <button class="tab disabled" title="即将上线">Bybit</button>
+                <button class="tab disabled" title="即将上线">HTX</button>
+            </div>
+            <div id="binance" class="tab-content active">
+                <iframe src="./binance/index.html"></iframe>
+            </div>
+            <div id="okx" class="tab-content">
+                <iframe src="./okx/index.html"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            // 检查是否是禁用的tab
+            const clickedTab = document.querySelector(`button[onclick="switchTab('${tabId}')"]`);
+            if (clickedTab.classList.contains('disabled')) {
+                return;
+            }
+
+            // 移除所有active类
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 添加active类到选中的tab
+            clickedTab.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+    </script>
+</body>
+</html> 
