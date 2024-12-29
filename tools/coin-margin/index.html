@@ -602,13 +602,13 @@
                 this.quarterlyCapital = quarterlyCapital;
             }
 
-            // 计算币本位盈��
+            // 修正币本位盈亏计算
             calculateBtcPnl(direction, openPrice, closePrice, size) {
                 if (direction === 'short') {
-                    // 空单币本位盈亏 = size * (开仓价格/平仓价格 - 1)
-                    return size * (openPrice/closePrice - 1);
+                    // 空单币本位盈亏 = size * (1 - closePrice/openPrice)
+                    return size * (1 - closePrice/openPrice);
                 } else {
-                    // 多单币本位盈亏 = size * (平仓价格/开仓价格 - 1)
+                    // 多单币本位盈亏 = size * (closePrice/openPrice - 1)
                     return size * (closePrice/openPrice - 1);
                 }
             }
@@ -856,14 +856,14 @@
             const usdPnls = [];
             
             for(let price = 50000; price <= 200000; price += 5000) {
-                // 计算永续合约币本位盈亏
+                // 永续合约币本位盈亏计算
                 const perpetualBtcPnl = perpetualDirection === 'short'
-                    ? perpetualSize * (perpetualOpen/price - 1)
+                    ? perpetualSize * (1 - price/perpetualOpen)
                     : perpetualSize * (price/perpetualOpen - 1);
                 
-                // 计算季度合约币本位盈亏
+                // 季度合约币本位盈亏计算
                 const quarterlyBtcPnl = quarterlyDirection === 'short'
-                    ? quarterlySize * (quarterlyOpen/price - 1)
+                    ? quarterlySize * (1 - price/quarterlyOpen)
                     : quarterlySize * (price/quarterlyOpen - 1);
 
                 // 计算总的币本位盈亏
@@ -872,12 +872,15 @@
                 const btcPnl = finalBtc - totalCapital;
                 
                 // 计算相对于初始资金的U本位盈亏
-                const initialUsdValue = totalCapital * perpetualOpen;  // 使用永续合约价格
+                const initialUsdValue = totalCapital * perpetualOpen;
                 const finalUsdValue = finalBtc * price;
                 const usdPnl = finalUsdValue - initialUsdValue;
                 
+                // 当BTC盈亏接近0时（比如小于0.0001），将其设为精确的0
+                const adjustedBtcPnl = Math.abs(btcPnl) < 0.0001 ? 0 : btcPnl;
+                
                 prices.push(price);
-                btcPnls.push(btcPnl);
+                btcPnls.push(adjustedBtcPnl);
                 usdPnls.push(usdPnl);
             }
 
@@ -890,18 +893,22 @@
                             return 'rgba(0, 0, 0, 0.2)';  // 零线加深
                         }
                         return context.tick.value < 0 
-                            ? 'rgba(255, 99, 132, 0.1)'   // 负值（亏损）区域网格线
-                            : 'rgba(75, 192, 192, 0.1)';  // 正值（盈利）区域网格线
+                            ? 'rgba(255, 99, 132, 0.1)'   // 负值区域
+                            : 'rgba(75, 192, 192, 0.1)';  // 正值区域
                     }
                 },
                 ticks: {
-                    padding: 10,  // 增加数字与轴的间距
+                    padding: 10,
                     font: {
-                        family: 'monospace'  // 使用等宽字体
+                        family: 'monospace'
                     },
                     callback: function(value) {
-                        // 统一格式化为 "+000000.00" 的格式（11个字符）
-                        return (value >= 0 ? '+' : '-') + Math.abs(value).toFixed(2).padStart(9, '0');
+                        // 当值非常接近0时（比如小于0.0001），直接显示0
+                        if (Math.abs(value) < 0.0001) {
+                            return '0.0000';
+                        }
+                        // 否则显示带符号的格式化数字
+                        return (value >= 0 ? '+' : '') + value.toFixed(4);
                     }
                 }
             };
