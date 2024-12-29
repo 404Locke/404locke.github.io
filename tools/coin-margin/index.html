@@ -811,11 +811,20 @@
                                 btcPnl, btcPnlPercentage,
                                 usdPnl, usdPnlPercentage,
                                 usdTotalPnl, usdTotalPercentage) {
-            // 更新币本位盈亏 - 改为可编辑的输入框
+            // 更新币本位盈亏 - 保持输入框状态
             const btcPnlElement = document.getElementById(btcPnlId);
-            btcPnlElement.innerHTML = `<input type="number" step="0.0001" value="${btcPnl.toFixed(4)}" 
-                style="width: 100px; color: ${btcPnl >= 0 ? 'green' : 'red'}" 
-                oninput="updateFromBtcPnl(this.value, '${btcPnlId}')">`;
+            const existingInput = btcPnlElement.querySelector('input');
+            
+            if (!existingInput) {
+                // 如果还没有输入框，创建一个新的
+                btcPnlElement.innerHTML = `<input type="number" step="0.0001" value="${btcPnl.toFixed(4)}" 
+                    style="width: 100px; color: ${btcPnl >= 0 ? 'green' : 'red'}" 
+                    oninput="updateFromBtcPnl(this.value, '${btcPnlId}')">`;
+            } else if (document.activeElement !== existingInput) {
+                // 只在输入框不是当前焦点时更新值
+                existingInput.value = btcPnl.toFixed(4);
+                existingInput.style.color = btcPnl >= 0 ? 'green' : 'red';
+            }
 
             // 更新币本位盈亏百分比
             const btcPnlPercentageElement = document.getElementById(btcPnlPercentageId);
@@ -1247,7 +1256,9 @@
                     newClosePrice = perpetualOpen * (btcPnl/perpetualSize + 1);
                 }
                 document.getElementById('perpetualClose').value = newClosePrice.toFixed(0);
-                document.getElementById('perpetualCloseRange').value = newClosePrice;
+                const perpetualCloseRange = document.getElementById('perpetualCloseRange');
+                perpetualCloseRange.value = newClosePrice;
+                updateSliderBackground(perpetualCloseRange);
             } else if (elementId === 'quarterlyBtcPnl') {
                 const quarterlyOpen = parseFloat(document.getElementById('quarterlyOpen').value);
                 const quarterlySize = parseFloat(document.getElementById('quarterlySize').value);
@@ -1258,8 +1269,11 @@
                 } else {
                     newClosePrice = quarterlyOpen * (btcPnl/quarterlySize + 1);
                 }
-                document.getElementById('quarterlyClose').value = newClosePrice.toFixed(0);
-                document.getElementById('quarterlyCloseRange').value = newClosePrice;
+                const quarterlyClose = document.getElementById('quarterlyClose');
+                const quarterlyCloseRange = document.getElementById('quarterlyCloseRange');
+                quarterlyClose.value = newClosePrice.toFixed(0);
+                quarterlyCloseRange.value = newClosePrice;
+                updateSliderBackground(quarterlyCloseRange);
             }
             
             // 重新计算所有结果
