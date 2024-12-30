@@ -475,11 +475,6 @@
                                     (<span id="perpetualBtcPnlPercentage">0.00</span>%)
                                 </div>
                                 <div class="result-item">
-                                    <strong>U本位盈亏：</strong>
-                                    <span id="perpetualUsdPnl">0.00</span> USD
-                                    (<span id="perpetualUsdPnlPercentage">0.00</span>%)
-                                </div>
-                                <div class="result-item">
                                     <strong>相对于初始资金U本位盈亏：</strong>
                                     <span id="perpetualUsdTotalPnl">0.00</span> USD
                                     (<span id="perpetualUsdTotalPercentage">0.00</span>%)
@@ -532,11 +527,6 @@
                                     <strong>币本位盈亏：</strong> 
                                     <span id="quarterlyBtcPnl">0.0000</span> BTC
                                     (<span id="quarterlyBtcPnlPercentage">0.00</span>%)
-                                </div>
-                                <div class="result-item">
-                                    <strong>U本位盈亏：</strong>
-                                    <span id="quarterlyUsdPnl">0.00</span> USD
-                                    (<span id="quarterlyUsdPnlPercentage">0.00</span>%)
                                 </div>
                                 <div class="result-item">
                                     <strong>相对于初始资金U本位盈亏：</strong>
@@ -694,13 +684,11 @@
             const perpetualUsdPnlPercentage = (perpetualUsdPnl / (perpetualSize * perpetualOpen)) * 100;
 
             // 计算永续合约相对初始资金的U本位盈亏
-            const perpetualTotal = calculator.calculateUsdTotalPnl(
-                perpetualDirection, 
-                perpetualOpen, 
-                perpetualClose, 
-                perpetualCapital,
-                perpetualSize
-            );
+            const perpetualInitialUsdValue = perpetualCapital * perpetualOpen;
+            const perpetualFinalBtc = perpetualCapital + perpetualBtcPnl;
+            const perpetualFinalUsdValue = perpetualFinalBtc * perpetualClose;
+            const perpetualTotalUsdPnl = perpetualFinalUsdValue - perpetualInitialUsdValue;
+            const perpetualTotalUsdPnlPercentage = (perpetualTotalUsdPnl / perpetualInitialUsdValue) * 100;
 
             // 计算季度合约盈亏
             const quarterlyBtcPnl = calculator.calculateBtcPnl(quarterlyDirection, quarterlyOpen, quarterlyClose, quarterlySize);
@@ -710,29 +698,23 @@
             const quarterlyUsdPnlPercentage = (quarterlyUsdPnl / (quarterlySize * quarterlyOpen)) * 100;
 
             // 计算季度合约相对初始资金的U本位盈亏
-            const quarterlyTotal = calculator.calculateUsdTotalPnl(
-                quarterlyDirection, 
-                quarterlyOpen, 
-                quarterlyClose, 
-                quarterlyCapital,
-                quarterlySize
-            );
+            const quarterlyInitialUsdValue = quarterlyCapital * perpetualOpen; // 使用永续价格作为市场价
+            const quarterlyFinalBtc = quarterlyCapital + quarterlyBtcPnl;
+            const quarterlyFinalUsdValue = quarterlyFinalBtc * perpetualClose;
+            const quarterlyTotalUsdPnl = quarterlyFinalUsdValue - quarterlyInitialUsdValue;
+            const quarterlyTotalUsdPnlPercentage = (quarterlyTotalUsdPnl / quarterlyInitialUsdValue) * 100;
 
-            // 更新续合约显示
-            updatePnlDisplay('perpetualBtcPnl', 'perpetualBtcPnlPercentage', 
-                            'perpetualUsdPnl', 'perpetualUsdPnlPercentage',
+            // 更新永续合约显示
+            updatePnlDisplay('perpetualBtcPnl', 'perpetualBtcPnlPercentage',
                             'perpetualUsdTotalPnl', 'perpetualUsdTotalPercentage',
                             perpetualBtcPnl, perpetualBtcPnlPercentage,
-                            perpetualUsdPnl, perpetualUsdPnlPercentage,
-                            perpetualTotal.pnl, perpetualTotal.percentage);
+                            perpetualTotalUsdPnl, perpetualTotalUsdPnlPercentage);
 
             // 更新季度合约显示
             updatePnlDisplay('quarterlyBtcPnl', 'quarterlyBtcPnlPercentage',
-                            'quarterlyUsdPnl', 'quarterlyUsdPnlPercentage',
                             'quarterlyUsdTotalPnl', 'quarterlyUsdTotalPercentage',
                             quarterlyBtcPnl, quarterlyBtcPnlPercentage,
-                            quarterlyUsdPnl, quarterlyUsdPnlPercentage,
-                            quarterlyTotal.pnl, quarterlyTotal.percentage);
+                            quarterlyTotalUsdPnl, quarterlyTotalUsdPnlPercentage);
 
             // 计算总盈亏
             const totalCapital = perpetualCapital + quarterlyCapital;  // 总初始资金
@@ -806,13 +788,11 @@
             updateChart();
         }
 
-        function updatePnlDisplay(btcPnlId, btcPnlPercentageId, 
-                                usdPnlId, usdPnlPercentageId,
+        function updatePnlDisplay(btcPnlId, btcPnlPercentageId,
                                 usdTotalPnlId, usdTotalPercentageId,
                                 btcPnl, btcPnlPercentage,
-                                usdPnl, usdPnlPercentage,
                                 usdTotalPnl, usdTotalPercentage) {
-            // 更新币本位盈亏 - 保留4位小数
+            // 更新币本位盈亏
             const btcPnlElement = document.getElementById(btcPnlId);
             btcPnlElement.textContent = (btcPnl >= 0 ? '+' : '') + btcPnl.toFixed(4);
             btcPnlElement.style.color = btcPnl >= 0 ? 'green' : 'red';
@@ -821,18 +801,9 @@
             btcPnlPercentageElement.textContent = (btcPnlPercentage >= 0 ? '+' : '') + btcPnlPercentage.toFixed(2);
             btcPnlPercentageElement.style.color = btcPnl >= 0 ? 'green' : 'red';
 
-            // 更新U本位盈亏 - 保留2位小数
-            const usdPnlElement = document.getElementById(usdPnlId);
-            usdPnlElement.textContent = (usdPnl >= 0 ? '+' : '') + usdPnl.toFixed(0);  // 整数
-            usdPnlElement.style.color = usdPnl >= 0 ? 'green' : 'red';
-
-            const usdPnlPercentageElement = document.getElementById(usdPnlPercentageId);
-            usdPnlPercentageElement.textContent = (usdPnlPercentage >= 0 ? '+' : '') + usdPnlPercentage.toFixed(2);
-            usdPnlPercentageElement.style.color = usdPnl >= 0 ? 'green' : 'red';
-
-            // 更新相对初始资金的U本位盈亏 - 保留2位小数
+            // 更新相对初始资金的U本位盈亏
             const usdTotalPnlElement = document.getElementById(usdTotalPnlId);
-            usdTotalPnlElement.textContent = (usdTotalPnl >= 0 ? '+' : '') + usdTotalPnl.toFixed(0);  // 整数
+            usdTotalPnlElement.textContent = (usdTotalPnl >= 0 ? '+' : '') + usdTotalPnl.toFixed(2);
             usdTotalPnlElement.style.color = usdTotalPnl >= 0 ? 'green' : 'red';
 
             const usdTotalPercentageElement = document.getElementById(usdTotalPercentageId);
