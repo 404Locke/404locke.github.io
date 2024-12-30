@@ -424,7 +424,7 @@
 <body>
     <div class="calculator-container">
         <div class="input-panel">
-            <h2>参数设置</h2>
+            <h2>币本位参数设置</h2>
             <div class="form-groups-container">
                 <div class="contracts-section">
                     <div class="form-group contract-section">
@@ -602,13 +602,13 @@
                 this.quarterlyCapital = quarterlyCapital;
             }
 
-            // 计算币本位盈亏
+            // 修正币本位盈亏计算
             calculateBtcPnl(direction, openPrice, closePrice, size) {
                 if (direction === 'short') {
-                    // 空单币本位盈亏 = size * (开仓价格/平仓价格 - 1)
-                    return size * (openPrice/closePrice - 1);
+                    // 空单币本位盈亏 = size * (1 - closePrice/openPrice)
+                    return size * (1 - closePrice/openPrice);
                 } else {
-                    // 多单币本位盈亏 = size * (平仓价格/开仓价格 - 1)
+                    // 多单币本位盈亏 = size * (closePrice/openPrice - 1)
                     return size * (closePrice/openPrice - 1);
                 }
             }
@@ -811,42 +811,29 @@
                                 btcPnl, btcPnlPercentage,
                                 usdPnl, usdPnlPercentage,
                                 usdTotalPnl, usdTotalPercentage) {
-            // 更新币本位盈亏 - 保持输入框状态
+            // 更新币本位盈亏 - 保留4位小数
             const btcPnlElement = document.getElementById(btcPnlId);
-            const existingInput = btcPnlElement.querySelector('input');
-            
-            if (!existingInput) {
-                // 如果还没有输入框，创建一个新的
-                btcPnlElement.innerHTML = `<input type="number" step="0.0001" value="${btcPnl.toFixed(4)}" 
-                    style="width: 100px; color: ${btcPnl >= 0 ? 'green' : 'red'}" 
-                    oninput="updateFromBtcPnl(this.value, '${btcPnlId}')">`;
-            } else if (document.activeElement !== existingInput) {
-                // 只在输入框不是当前焦点时更新值
-                existingInput.value = btcPnl.toFixed(4);
-                existingInput.style.color = btcPnl >= 0 ? 'green' : 'red';
-            }
+            btcPnlElement.textContent = (btcPnl >= 0 ? '+' : '') + btcPnl.toFixed(4);
+            btcPnlElement.style.color = btcPnl >= 0 ? 'green' : 'red';
 
-            // 更新币本位盈亏百分比
             const btcPnlPercentageElement = document.getElementById(btcPnlPercentageId);
             btcPnlPercentageElement.textContent = (btcPnlPercentage >= 0 ? '+' : '') + btcPnlPercentage.toFixed(2);
             btcPnlPercentageElement.style.color = btcPnl >= 0 ? 'green' : 'red';
 
-            // 更新U本位盈亏
+            // 更新U本位盈亏 - 保留2位小数
             const usdPnlElement = document.getElementById(usdPnlId);
-            usdPnlElement.textContent = (usdPnl >= 0 ? '+' : '') + usdPnl.toFixed(0);
+            usdPnlElement.textContent = (usdPnl >= 0 ? '+' : '') + usdPnl.toFixed(0);  // 整数
             usdPnlElement.style.color = usdPnl >= 0 ? 'green' : 'red';
 
-            // 更新U本位盈亏百分比
             const usdPnlPercentageElement = document.getElementById(usdPnlPercentageId);
             usdPnlPercentageElement.textContent = (usdPnlPercentage >= 0 ? '+' : '') + usdPnlPercentage.toFixed(2);
             usdPnlPercentageElement.style.color = usdPnl >= 0 ? 'green' : 'red';
 
-            // 更新相对初始资金的U本位盈亏
+            // 更新相对初始资金的U本位盈亏 - 保留2位小数
             const usdTotalPnlElement = document.getElementById(usdTotalPnlId);
-            usdTotalPnlElement.textContent = (usdTotalPnl >= 0 ? '+' : '') + usdTotalPnl.toFixed(0);
+            usdTotalPnlElement.textContent = (usdTotalPnl >= 0 ? '+' : '') + usdTotalPnl.toFixed(0);  // 整数
             usdTotalPnlElement.style.color = usdTotalPnl >= 0 ? 'green' : 'red';
 
-            // 更新相对初始资金的U本位盈亏百分比
             const usdTotalPercentageElement = document.getElementById(usdTotalPercentageId);
             usdTotalPercentageElement.textContent = (usdTotalPercentage >= 0 ? '+' : '') + usdTotalPercentage.toFixed(2);
             usdTotalPercentageElement.style.color = usdTotalPnl >= 0 ? 'green' : 'red';
@@ -869,14 +856,14 @@
             const usdPnls = [];
             
             for(let price = 50000; price <= 200000; price += 5000) {
-                // 计算永续合约币本位盈亏
+                // 永续合约币本位盈亏计算
                 const perpetualBtcPnl = perpetualDirection === 'short'
-                    ? perpetualSize * (perpetualOpen/price - 1)
+                    ? perpetualSize * (1 - price/perpetualOpen)
                     : perpetualSize * (price/perpetualOpen - 1);
                 
-                // 计算季度合约币本位盈亏
+                // 季度合约币本位盈亏计算
                 const quarterlyBtcPnl = quarterlyDirection === 'short'
-                    ? quarterlySize * (quarterlyOpen/price - 1)
+                    ? quarterlySize * (1 - price/quarterlyOpen)
                     : quarterlySize * (price/quarterlyOpen - 1);
 
                 // 计算总的币本位盈亏
@@ -885,12 +872,15 @@
                 const btcPnl = finalBtc - totalCapital;
                 
                 // 计算相对于初始资金的U本位盈亏
-                const initialUsdValue = totalCapital * perpetualOpen;  // 使用永续合约价格
+                const initialUsdValue = totalCapital * perpetualOpen;
                 const finalUsdValue = finalBtc * price;
                 const usdPnl = finalUsdValue - initialUsdValue;
                 
+                // 当BTC盈亏接近0时（比如小于0.0001），将其设为精确的0
+                const adjustedBtcPnl = Math.abs(btcPnl) < 0.0001 ? 0 : btcPnl;
+                
                 prices.push(price);
-                btcPnls.push(btcPnl);
+                btcPnls.push(adjustedBtcPnl);
                 usdPnls.push(usdPnl);
             }
 
@@ -903,18 +893,22 @@
                             return 'rgba(0, 0, 0, 0.2)';  // 零线加深
                         }
                         return context.tick.value < 0 
-                            ? 'rgba(255, 99, 132, 0.1)'   // 负值（亏损）区域网格线
-                            : 'rgba(75, 192, 192, 0.1)';  // 正值（盈利）区域网格线
+                            ? 'rgba(255, 99, 132, 0.1)'   // 负值区域
+                            : 'rgba(75, 192, 192, 0.1)';  // 正值区域
                     }
                 },
                 ticks: {
-                    padding: 10,  // 增加数字与轴的间距
+                    padding: 10,
                     font: {
-                        family: 'monospace'  // 使用等宽字体
+                        family: 'monospace'
                     },
                     callback: function(value) {
-                        // 统一格式化为 "+000000.00" 的格式（11个字符）
-                        return (value >= 0 ? '+' : '-') + Math.abs(value).toFixed(2).padStart(9, '0');
+                        // 当值非常接近0时（比如小于0.0001），直接显示0
+                        if (Math.abs(value) < 0.0001) {
+                            return '0.0000';
+                        }
+                        // 否则显示带符号的格式化数字
+                        return (value >= 0 ? '+' : '') + value.toFixed(4);
                     }
                 }
             };
@@ -1235,49 +1229,6 @@
         function forceUpdate() {
             calculateResults();
             updateChart();
-        }
-
-        // 根据输入的币本位盈亏计算平仓价格
-        function updateFromBtcPnl(btcPnl, elementId) {
-            const perpetualOpen = parseFloat(document.getElementById('perpetualOpen').value);
-            const perpetualSize = parseFloat(document.getElementById('perpetualSize').value);
-            const perpetualDirection = document.querySelector('input[name="perpetualDirection"]:checked').value;
-            
-            // 计算新的平仓价格
-            let newClosePrice;
-            if (elementId === 'perpetualBtcPnl') {
-                if (perpetualDirection === 'short') {
-                    // 空单: size * (openPrice/closePrice - 1) = btcPnl
-                    // 解出 closePrice = openPrice / (btcPnl/size + 1)
-                    newClosePrice = perpetualOpen / (btcPnl/perpetualSize + 1);
-                } else {
-                    // 多单: size * (closePrice/openPrice - 1) = btcPnl
-                    // 解出 closePrice = openPrice * (btcPnl/size + 1)
-                    newClosePrice = perpetualOpen * (btcPnl/perpetualSize + 1);
-                }
-                document.getElementById('perpetualClose').value = newClosePrice.toFixed(0);
-                const perpetualCloseRange = document.getElementById('perpetualCloseRange');
-                perpetualCloseRange.value = newClosePrice;
-                updateSliderBackground(perpetualCloseRange);
-            } else if (elementId === 'quarterlyBtcPnl') {
-                const quarterlyOpen = parseFloat(document.getElementById('quarterlyOpen').value);
-                const quarterlySize = parseFloat(document.getElementById('quarterlySize').value);
-                const quarterlyDirection = document.querySelector('input[name="quarterlyDirection"]:checked').value;
-                
-                if (quarterlyDirection === 'short') {
-                    newClosePrice = quarterlyOpen / (btcPnl/quarterlySize + 1);
-                } else {
-                    newClosePrice = quarterlyOpen * (btcPnl/quarterlySize + 1);
-                }
-                const quarterlyClose = document.getElementById('quarterlyClose');
-                const quarterlyCloseRange = document.getElementById('quarterlyCloseRange');
-                quarterlyClose.value = newClosePrice.toFixed(0);
-                quarterlyCloseRange.value = newClosePrice;
-                updateSliderBackground(quarterlyCloseRange);
-            }
-            
-            // 重新计算所有结果
-            calculateResults();
         }
     </script>
 </body>
