@@ -455,7 +455,7 @@
                                 </label>
                             </div>
                         </div>
-                        <input type="range" id="perpetualOpenRange" min="10" max="1000" step="1" value="100">
+                        <input type="range" id="perpetualOpenRange" min="50" max="200" step="0.1" value="100">
                         <div class="size-input">
                             <label>合约数量 (BTC)</label>
                             <div class="input-wrapper">
@@ -465,7 +465,7 @@
                             <label>平仓价格 (USD)</label>
                             <div class="input-wrapper">
                                 <input type="number" id="perpetualClose" value="130">
-                                <input type="range" id="perpetualCloseRange" min="10" max="1000" step="1" value="130">
+                                <input type="range" id="perpetualCloseRange" min="50" max="200" step="0.1" value="130">
                             </div>
                             <div class="contract-pnl">
                                 <div class="result-item">
@@ -514,7 +514,7 @@
                                 </label>
                             </div>
                         </div>
-                        <input type="range" id="quarterlyOpenRange" min="10" max="1000" step="1" value="106">
+                        <input type="range" id="quarterlyOpenRange" min="50" max="200" step="0.1" value="106">
                         <div class="size-input">
                             <label>合约数量 (BTC)</label>
                             <div class="input-wrapper">
@@ -524,7 +524,7 @@
                             <label>平仓价格 (USD)</label>
                             <div class="input-wrapper">
                                 <input type="number" id="quarterlyClose" value="130">
-                                <input type="range" id="quarterlyCloseRange" min="10" max="1000" step="1" value="130">
+                                <input type="range" id="quarterlyCloseRange" min="50" max="200" step="0.1" value="130">
                             </div>
                             <div class="contract-pnl">
                                 <div class="result-item">
@@ -855,7 +855,7 @@
             const btcPnls = [];
             const usdPnls = [];
             
-            for(let price = 10; price <= 1000; price += 10) {
+            for(let price = 50; price <= 200; price += 5) {
                 // 永续合约币本位盈亏计算
                 const perpetualBtcPnl = perpetualDirection === 'short'
                     ? perpetualSize * (1 - price/perpetualOpen)
