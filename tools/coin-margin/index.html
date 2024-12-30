@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
     <style>
         :root {
             --primary-color: #3498db;
@@ -913,6 +914,202 @@
                 }
             };
 
+            // 找到最大亏损点和最小亏损点（盈利最大点）
+            let maxLossIndex = 0;
+            let minLossIndex = 0;
+            let maxLoss = usdPnls[0];
+            let minLoss = usdPnls[0];
+
+            for (let i = 0; i < usdPnls.length; i++) {
+                if (usdPnls[i] < maxLoss) {  // 找最大亏损点
+                    maxLoss = usdPnls[i];
+                    maxLossIndex = i;
+                }
+                if (usdPnls[i] > minLoss) {  // 找最小亏损点（盈利最大点）
+                    minLoss = usdPnls[i];
+                    minLossIndex = i;
+                }
+            }
+
+            const maxLossPrice = prices[maxLossIndex];
+            const minLossPrice = prices[minLossIndex];
+
+            // 更新 USD 盈亏图表
+            if (usdChart) {
+                usdChart.destroy();
+            }
+            const usdCtx = document.getElementById('usdPnlChart');
+            usdChart = new Chart(usdCtx, {
+                type: 'line',
+                data: {
+                    labels: prices,
+                    datasets: [{
+                        label: 'USD盈亏',
+                        data: usdPnls,
+                        borderColor: 'rgb(255, 99, 132)',
+                        tension: 0.1,
+                        borderWidth: 2,
+                        pointRadius: (context) => {
+                            // 最大亏损点和最优点使用更大的圆点
+                            return context.dataIndex === maxLossIndex || context.dataIndex === minLossIndex ? 8 : 3;
+                        },
+                        pointBackgroundColor: (context) => {
+                            if (context.dataIndex === maxLossIndex) {
+                                return 'rgb(255, 99, 132)';  // 红色
+                            } else if (context.dataIndex === minLossIndex) {
+                                return 'rgb(75, 192, 192)';  // 绿色
+                            }
+                            return 'white';
+                        },
+                        pointBorderColor: (context) => {
+                            if (context.dataIndex === maxLossIndex) {
+                                return 'rgb(255, 99, 132)';
+                            } else if (context.dataIndex === minLossIndex) {
+                                return 'rgb(75, 192, 192)';
+                            }
+                            return 'rgb(255, 99, 132)';
+                        },
+                        pointBorderWidth: (context) => {
+                            // 特殊点使用更粗的边框
+                            return context.dataIndex === maxLossIndex || context.dataIndex === minLossIndex ? 3 : 2;
+                        },
+                        fill: true,
+                        backgroundColor: (context) => {
+                            const chart = context.chart;
+                            const { ctx, chartArea } = chart;
+                            if (!chartArea) return null;
+                            
+                            // 创建渐变
+                            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                            
+                            // 找到0点在图表中的相对位置
+                            const zeroLinePos = chart.scales.y.getPixelForValue(0);
+                            const totalHeight = chartArea.bottom - chartArea.top;
+                            const zeroPercentage = (chartArea.bottom - zeroLinePos) / totalHeight;
+                            
+                            // 亏损区域在0点以下（红色），盈利区域在0点以上（绿色）
+                            gradient.addColorStop(0, 'rgba(255, 99, 132, 0.1)');   // 亏损区域 - 浅红色
+                            gradient.addColorStop(zeroPercentage, 'rgba(255, 99, 132, 0.1)'); // 亏损区域 - 浅红色
+                            gradient.addColorStop(zeroPercentage, 'rgba(75, 192, 192, 0.1)'); // 盈利区域 - 浅绿色
+                            gradient.addColorStop(1, 'rgba(75, 192, 192, 0.1)');   // 盈利区域 - 浅绿色
+                            
+                            return gradient;
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        tooltip: {
+                            enabled: true,
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.parsed.y;
+                                    const perpetualOpen = parseFloat(document.getElementById('perpetualOpen').value);
+                                    const perpetualCapital = parseFloat(document.getElementById('perpetualCapital').value);
+                                    const quarterlyCapital = parseFloat(document.getElementById('quarterlyCapital').value);
+                                    const totalCapital = perpetualCapital + quarterlyCapital;
+                                    const initialUsdValue = totalCapital * perpetualOpen;
+                                    const percentage = (value / initialUsdValue) * 100;
+                                    
+                                    let label = [
+                                        `价格: ${context.label} USD`,
+                                        `盈亏: ${value.toLocaleString('en-US', {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2
+                                        })} USD (${percentage.toFixed(2)}%)`
+                                    ];
+                                    
+                                    // 为最大亏损点添加特殊标注
+                                    if (context.dataIndex === maxLossIndex) {
+                                        label.push(`⚠️ 最大亏损点`);
+                                    }
+                                    
+                                    return label;
+                                }
+                            },
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            titleColor: '#333',
+                            bodyColor: '#333',
+                            borderColor: '#ddd',
+                            borderWidth: 1,
+                            padding: 10,
+                            displayColors: false
+                        },
+                        datalabels: {
+                            display: true,
+                            color: '#333',
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            borderRadius: 4,
+                            padding: 4,
+                            align: 'top',
+                            offset: 10,
+                            rotation: 45,
+                            formatter: (value) => {
+                                return value < 0 ? value.toFixed(4) : value.toFixed(4);
+                            },
+                            font: {
+                                size: 9,
+                                weight: 'bold'
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                maxLossPoint: {
+                                    type: 'label',
+                                    xValue: maxLossPrice,
+                                    yValue: maxLoss,
+                                    backgroundColor: 'rgba(255, 99, 132, 0.9)',
+                                    content: [`最大亏损点`, `${maxLossPrice} USD`],
+                                    font: {
+                                        size: 12,
+                                        weight: 'bold'
+                                    },
+                                    padding: 6,
+                                    borderRadius: 4,
+                                    color: 'white',
+                                    position: 'top'
+                                },
+                                minLossPoint: {
+                                    type: 'label',
+                                    xValue: minLossPrice,
+                                    yValue: minLoss,
+                                    backgroundColor: 'rgba(75, 192, 192, 0.9)',  // 使用绿色
+                                    content: [`最优点`, `${minLossPrice} USD`],
+                                    font: {
+                                        size: 12,
+                                        weight: 'bold'
+                                    },
+                                    padding: 6,
+                                    borderRadius: 4,
+                                    color: 'white',
+                                    position: 'top'
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ...commonYAxisConfig,
+                            ticks: {
+                                ...commonYAxisConfig.ticks,
+                                callback: function(value) {
+                                    // 格式化为固定长度的字符串："+000000.0000" (12个字符)
+                                    return (value >= 0 ? '+' : '-') + Math.abs(value).toFixed(4).padStart(10, '0');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
             // 更新 BTC 盈亏图表
             if (btcChart) {
                 btcChart.destroy();
@@ -1021,123 +1218,6 @@
                     }
                 }
             });
-
-            // 更新 USD 盈亏图表
-            if (usdChart) {
-                usdChart.destroy();
-            }
-            const usdCtx = document.getElementById('usdPnlChart');
-            usdChart = new Chart(usdCtx, {
-                type: 'line',
-                data: {
-                    labels: prices,
-                    datasets: [{
-                        label: 'USD盈亏',
-                        data: usdPnls,
-                        borderColor: 'rgb(255, 99, 132)',
-                        tension: 0.1,
-                        borderWidth: 2,
-                        pointRadius: 3,
-                        pointBackgroundColor: 'white',
-                        pointBorderColor: 'rgb(255, 99, 132)',
-                        pointBorderWidth: 2,
-                        pointHoverRadius: 6,
-                        pointHoverBorderWidth: 2,
-                        pointHoverBackgroundColor: 'white',
-                        fill: true,
-                        backgroundColor: (context) => {
-                            const chart = context.chart;
-                            const { ctx, chartArea } = chart;
-                            if (!chartArea) return null;
-                            
-                            // 创建渐变
-                            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-                            
-                            // 找到0点在图表中的相对位置
-                            const zeroLinePos = chart.scales.y.getPixelForValue(0);
-                            const totalHeight = chartArea.bottom - chartArea.top;
-                            const zeroPercentage = (chartArea.bottom - zeroLinePos) / totalHeight;
-                            
-                            // 亏损区域在0点以下（红色），盈利区域在0点以上（绿色）
-                            gradient.addColorStop(0, 'rgba(255, 99, 132, 0.1)');   // 亏损区域 - 浅红色
-                            gradient.addColorStop(zeroPercentage, 'rgba(255, 99, 132, 0.1)'); // 亏损区域 - 浅红色
-                            gradient.addColorStop(zeroPercentage, 'rgba(75, 192, 192, 0.1)'); // 盈利区域 - 浅绿色
-                            gradient.addColorStop(1, 'rgba(75, 192, 192, 0.1)');   // 盈利区域 - 浅绿色
-                            
-                            return gradient;
-                        }
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    },
-                    plugins: {
-                        tooltip: {
-                            enabled: true,
-                            mode: 'index',
-                            intersect: false,
-                            callbacks: {
-                                label: function(context) {
-                                    const value = context.parsed.y;
-                                    const perpetualOpen = parseFloat(document.getElementById('perpetualOpen').value);
-                                    const perpetualCapital = parseFloat(document.getElementById('perpetualCapital').value);
-                                    const quarterlyCapital = parseFloat(document.getElementById('quarterlyCapital').value);
-                                    const totalCapital = perpetualCapital + quarterlyCapital;
-                                    const initialUsdValue = totalCapital * perpetualOpen;
-                                    const percentage = (value / initialUsdValue) * 100;
-                                    return [
-                                        `价格: ${context.label} USD`,
-                                        `盈亏: ${value.toLocaleString('en-US', {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2
-                                        })} USD (${percentage.toFixed(2)}%)`
-                                    ];
-                                }
-                            },
-                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                            titleColor: '#333',
-                            bodyColor: '#333',
-                            borderColor: '#ddd',
-                            borderWidth: 1,
-                            padding: 10,
-                            displayColors: false
-                        },
-                        datalabels: {
-                            display: true,
-                            color: '#333',
-                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                            borderRadius: 4,
-                            padding: 4,
-                            align: 'top',
-                            offset: 10,
-                            rotation: 45,
-                            formatter: (value) => {
-                                return value < 0 ? value.toFixed(2) : value.toFixed(2);
-                            },
-                            font: {
-                                size: 9,
-                                weight: 'bold'
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            ...commonYAxisConfig,
-                            ticks: {
-                                ...commonYAxisConfig.ticks,
-                                callback: function(value) {
-                                    // 格式化为固定长度的字符串："+000000.00" (12个字符)
-                                    return (value >= 0 ? '+' : '-') + Math.abs(value).toFixed(2).padStart(10, '0');
-                                }
-                            }
-                        }
-                    }
-                }
-            });
         }
 
         function syncInputs(rangeId, numberId) {
@@ -1220,6 +1300,7 @@
         }
 
         Chart.register(ChartDataLabels);
+        Chart.register(ChartAnnotation);
 
         // 确保在永续合约开仓价格改变时更新USD金额
         document.getElementById('perpetualOpen').addEventListener('input', calculateResults);
