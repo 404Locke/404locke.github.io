@@ -149,10 +149,7 @@
                         item.contractType === 'CURRENT_QUARTER' || 
                         item.contractType === 'NEXT_QUARTER'
                     )
-                    .map(item => {
-                        const match = item.symbol.match(/\d{6}$/);
-                        return match ? match[0] : null;
-                    })
+                    .map(item => item.deliveryDate)  // 使用 deliveryDate 字段
                     .filter(date => date)
                 )];
                 
@@ -163,12 +160,10 @@
             }
         }
 
-        function formatDateDisplay(dateCode) {
-            // 将日期格式化为 YYYY-MM-DD
-            const year = '20' + dateCode.slice(0, 2);
-            const month = dateCode.slice(2, 4);
-            const day = dateCode.slice(4, 6);
-            return `${year}-${month}-${day}`;
+        function formatDateDisplay(timestamp) {
+            // 将时间戳转换为 YYYY-MM-DD 格式
+            const date = new Date(parseInt(timestamp));
+            return date.toISOString().split('T')[0];
         }
 
         async function initializeDeliveryDates() {
@@ -222,14 +217,15 @@
                     .filter(item => 
                         (item.contractType === 'CURRENT_QUARTER' || 
                          item.contractType === 'NEXT_QUARTER') &&
-                        item.symbol.includes(selectedDate)
+                        String(item.deliveryDate) === String(selectedDate)
                     )
                     .map(item => ({
                         symbol: item.symbol.split('USD_')[0],
-                        contractSize: parseFloat(item.contractSize) || 100 // 默认为100如果没有指定
+                        futuresSymbol: item.symbol,  // 保存完整的期货合约符号
+                        contractSize: parseFloat(item.contractSize) || 100
                     }));
                 
-                return [...new Set(symbols.map(item => JSON.stringify(item)))].map(item => JSON.parse(item)); // 去重
+                return [...new Set(symbols.map(item => JSON.stringify(item)))].map(item => JSON.parse(item));
             } catch (error) {
                 console.error('Error fetching symbols:', error);
                 return [];
@@ -239,7 +235,6 @@
         async function fetchArbitrageData(selectedDate) {
             NProgress.start();
             
-            // 创建一个临时数组来存储新数据
             let newTableData = [];
             
             try {
@@ -248,11 +243,9 @@
                 
                 for (const symbolInfo of symbols) {
                     try {
-                        const futuresSymbol = `${symbolInfo.symbol}USD_${selectedDate}`;
-                        
                         const [spotRes, futuresRes] = await Promise.all([
                             fetch(`${BINANCE_SPOT_API}/api/v3/ticker/price?symbol=${symbolInfo.symbol}USDT`),
-                            fetch(`${BINANCE_API_BASE}/dapi/v1/ticker/24hr?symbol=${futuresSymbol}`)
+                            fetch(`${BINANCE_API_BASE}/dapi/v1/ticker/24hr?symbol=${symbolInfo.futuresSymbol}`)  // 使用完整的期货合约符号
                         ]);
 
                         let [spotData, futuresData] = await Promise.all([
@@ -272,9 +265,9 @@
                             const priceDiff = futuresPrice - spotPrice;
                             const premium = (priceDiff / spotPrice) * 100;
                             
-                            const deliveryDate = new Date(formatDateDisplay(selectedDate));
+                            const deliveryDate = new Date(parseInt(selectedDate));
                             const now = new Date();
-                            const daysRemaining = Math.ceil((deliveryDate - now) / (1000 * 60 * 60 * 24));
+                            const daysRemaining = (deliveryDate - now) / (1000 * 60 * 60 * 24);
                             
                             const apr = (premium / daysRemaining) * 365;
                             const contractValue = symbolInfo.contractSize;
@@ -397,7 +390,7 @@
                         ${data.premium.toFixed(2)}%
                     </td>
                     <td>${data.volume.toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
-                    <td>${data.daysRemaining}</td>
+                    <td>${data.daysRemaining.toFixed(1)}</td>
                     <td class="${data.apr >= 0 ? 'premium-positive' : 'premium-negative'}">
                         ${data.apr.toFixed(2)}%
                     </td>
