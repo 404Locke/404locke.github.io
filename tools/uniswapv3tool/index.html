@@ -118,7 +118,17 @@
         }
 
         .slider-container {
-            margin: 15px 0;
+            margin: 6px 0;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+        .slider-container:focus,
+        .slider-container:focus-within {
+            outline: none;
+            box-shadow: none;
+            border: none;
         }
 
         .slider-label {
@@ -129,13 +139,67 @@
             font-size: 0.9em;
         }
 
+        .slider-inline {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .price-change-inline {
+            margin-left: 8px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .slider-inline .slider {
+            flex: 1;
+        }
+
         .slider {
             width: 100%;
-            height: 8px;
+            height: 6px;
             border-radius: 5px;
             background: #ddd;
-            outline: none;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
             -webkit-appearance: none;
+            appearance: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .slider:focus,
+        .slider:active {
+            outline: none !important;
+            box-shadow: none !important;
+            border: none !important;
+        }
+
+        .slider::-webkit-slider-thumb:focus,
+        .slider::-webkit-slider-thumb:active {
+            outline: none;
+            box-shadow: none;
+            border: 2px solid var(--primary-color);
+        }
+
+        .slider::-moz-range-thumb:focus,
+        .slider::-moz-range-thumb:active {
+            outline: none;
+            box-shadow: none;
+            border: 2px solid var(--primary-color);
+        }
+
+        /* WebKit track */
+        .slider::-webkit-slider-runnable-track {
+            height: 6px;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+            background: transparent;
+            border-radius: 5px;
+            margin: 0;
+            padding: 0;
         }
 
         .slider::-webkit-slider-thumb {
@@ -146,6 +210,7 @@
             border-radius: 50%;
             background: var(--primary-color);
             cursor: pointer;
+            margin-top: -7px; /* center thumb over 6px track: (20-6)/2 */
         }
 
         .slider::-moz-range-thumb {
@@ -157,23 +222,34 @@
             border: none;
         }
 
+        /* Firefox track */
+        .slider::-moz-range-track {
+            height: 6px;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+            background: transparent;
+        }
+
         .slider-range-controls {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
-            margin-top: 15px;
+            margin-top: 8px;
         }
 
         .range-input-group {
             display: flex;
-            flex-direction: column;
-            gap: 5px;
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
         }
 
         .range-input-group label {
-            font-size: 0.8em;
+            font-size: 0.9em;
             color: var(--text-secondary);
             font-weight: 500;
+            margin: 0;
         }
 
         .range-input-group input {
@@ -181,10 +257,35 @@
             border: 1px solid var(--border-color);
             border-radius: 4px;
             font-size: 12px;
+            width: 140px;
         }
 
         .range-slider-container {
             margin: 15px 0;
+        }
+
+
+        .section-divider {
+            border-top: 1px solid var(--border-color);
+            margin: 24px 0;
+        }
+
+        .inline-row {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 12px;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .inline-row .custom-range-slider {
+            width: 100%;
+            margin: 0 6px;
+        }
+
+        .inline-row .slider {
+            width: calc(100% - 12px);
+            margin: 0 6px;
         }
 
 
@@ -284,13 +385,13 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
-            margin-top: 15px;
+            margin-top: 8px;
         }
 
         .formula-section {
             margin-top: 20px;
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 15px;
         }
 
@@ -350,6 +451,13 @@
 
         .reset-btn:hover {
             background: #6c757d;
+        }
+
+        .reset-btn-inline {
+            padding: 4px 10px;
+            font-size: 12px;
+            margin-left: 10px;
+            vertical-align: middle;
         }
 
         .results-grid {
@@ -471,7 +579,7 @@
 <body>
     <div class="container">
             <div class="card">
-            <h3>流动性提供设置</h3>
+            <h3>uniswap v3 集中流动性提供设置 <button type="button" class="reset-btn reset-btn-inline" onclick="resetToDefaults()">数据恢复默认值</button></h3>
             <div class="form-row">
                 <div class="form-group">
                     <label for="investmentAmount">投入资金 (USDC)</label>
@@ -485,52 +593,51 @@
                 <div class="form-group">
                 <div class="range-header">
                     <label>流动性价格区间 (USDC)</label>
+                </div>
+                <div class="inline-row">
+                    <div class="range-input-group">
+                        <label for="lowerPrice">下限价格:</label>
+                        <input type="number" id="lowerPrice" value="50" step="0.1" min="0">
+                    </div>
                     <div class="custom-range-slider">
                         <div class="range-track">
                             <div class="range-fill" id="rangeFill"></div>
                             <div class="range-handle range-handle-min" id="rangeHandleMin" draggable="true">
                                 <div class="handle-value">50</div>
-                </div>
+                            </div>
                             <div class="range-handle range-handle-max" id="rangeHandleMax" draggable="true">
-                                <div class="handle-value">200</div>
-            </div>
+                                <div class="handle-value">150</div>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="range-input-row">
-                    <div class="range-input-group">
-                        <label for="lowerPrice">下限价格:</label>
-                    <input type="number" id="lowerPrice" value="50" step="0.1" min="0">
-                </div>
                     <div class="range-input-group">
                         <label for="upperPrice">上限价格:</label>
-                    <input type="number" id="upperPrice" value="200" step="0.1" min="0">
+                        <input type="number" id="upperPrice" value="150" step="0.1" min="0">
                     </div>
                 </div>
                 </div>
+                <div class="section-divider"></div>
                 <div class="form-group">
-                    <label for="currentPrice">当前SOL价格 (USDC)</label>
-                    <div class="slider-container">
-                        <div class="slider-label">
-                            <input type="number" id="currentPriceInput" value="100" step="0.1" min="0" style="width: 140px; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 14px;">
-                            <span id="priceChangeLabel">0%</span>
+                    <label for="currentPrice">当前SOL价格 (USDC) <span id="priceChangeLabel" class="price-change-inline">0%</span></label>
+                    <div class="inline-row">
+                        <div class="range-input-group">
+                            <label for="sliderMinPrice">SOL价格最小值:</label>
+                            <input type="number" id="sliderMinPrice" value="10" step="0.1" min="0">
                         </div>
-                    <input type="range" id="currentPrice" class="slider" value="100" step="0.1">
+                        <div class="slider-inline">
+                            <input type="range" id="currentPrice" class="slider" value="100" step="0.1">
+                        </div>
+                        <div class="range-input-group">
+                            <label for="sliderMaxPrice">SOL价格最大值:</label>
+                            <input type="number" id="sliderMaxPrice" value="500" step="0.1" min="0">
+                        </div>
                     </div>
-                <div class="slider-range-controls">
-                    <div class="range-input-group">
-                        <label for="sliderMinPrice">滑块最小值:</label>
-                        <input type="number" id="sliderMinPrice" value="10" step="0.1" min="0">
-                </div>
-                    <div class="range-input-group">
-                        <label for="sliderMaxPrice">滑块最大值:</label>
-                        <input type="number" id="sliderMaxPrice" value="500" step="0.1" min="0">
+                    <div class="slider-label" style="margin-top: 6px; justify-content: center;">
+                        <input type="number" id="currentPriceInput" value="100" step="0.1" min="0" style="width: 160px; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 14px; text-align: center;">
                     </div>
                 </div>
             </div>
-            <div class="form-actions">
-                <button type="button" class="btn reset-btn" onclick="resetToDefaults()">重置为默认值</button>
-            </div>
+            
         </div>
 
         <div class="results-grid">
@@ -541,7 +648,7 @@
             </div>
             <div class="result-card">
                 <div class="result-value" id="impermanentLoss">$0</div>
-                <div class="result-label">无常损失 (%)</div>
+                <div class="result-label">无常损失(USDC)-相对于最初HODL价值</div>
                 <div class="result-percentage" id="impermanentLossPercent">0%</div>
             </div>
             </div>
@@ -567,15 +674,7 @@
             </div>
         </div>
                 </div>
-                <div class="formula-item">
-                    <h4>价值变化百分比</h4>
-                    <div class="formula-content">
-                        <span>价值变化百分比 = (当前总价值 - 投入资金) ÷ 投入资金 × 100%</span>
-                        <div class="formula-detail">
-                            (<span id="formulaTotalValue3">0</span> - <span id="formulaInvestment3">0</span>) ÷ <span id="formulaInvestment3">0</span> × 100% = <span id="formulaValueChangePercent">0</span>%
-                        </div>
-                    </div>
-                </div>
+                
             </div>
         </div>
     </div>
@@ -586,7 +685,7 @@
             investmentAmount: 10000,
             initialPrice: 100,
             lowerPrice: 50,
-            upperPrice: 200,
+            upperPrice: 150,
             currentPrice: 100,
             sliderMinPrice: 10,
             sliderMaxPrice: 500
@@ -688,6 +787,7 @@
             initializeInputs();
             updateSliderRange();
             calculateResults();
+            updateSliderProgress();
         });
 
         // 初始化输入框
@@ -949,24 +1049,30 @@
 
         // 更新公式显示
         function updateFormulaDisplay(solAmount, usdcAmount, totalValue, impermanentLoss, totalValuePercent, hodlValue) {
-            // 更新当前总价值计算
-            document.getElementById('formulaSolAmount').textContent = solAmount.toFixed(4);
-            document.getElementById('formulaCurrentPrice').textContent = currentPrice.toFixed(2);
-            document.getElementById('formulaUsdcAmount').textContent = usdcAmount.toFixed(2);
-            document.getElementById('formulaTotalValue').textContent = totalValue.toFixed(2);
-            
-            // 更新无常损失计算
-            document.getElementById('formulaTotalValue2').textContent = totalValue.toFixed(2);
-            document.getElementById('formulaInvestment').textContent = investmentAmount.toFixed(2);
-            document.getElementById('formulaInvestment2').textContent = impermanentLoss.toFixed(2);
-            
-            // 更新价值变化百分比计算
-            document.getElementById('formulaTotalValue3').textContent = totalValue.toFixed(2);
-            document.getElementById('formulaInvestment3').textContent = investmentAmount.toFixed(2);
-            document.getElementById('formulaValueChangePercent').textContent = totalValuePercent.toFixed(2);
+            function setText(id, text) {
+                const el = document.getElementById(id);
+                if (el) el.textContent = text;
+            }
 
-            // 更新HODL价值计算
-            document.getElementById('formulaHodlValue').textContent = hodlValue.toFixed(2);
+            // 当前总价值计算
+            setText('formulaSolAmount', solAmount.toFixed(4));
+            setText('formulaCurrentPrice', currentPrice.toFixed(2));
+            setText('formulaUsdcAmount', usdcAmount.toFixed(2));
+            setText('formulaTotalValue', totalValue.toFixed(2));
+
+            // 无常损失计算
+            setText('formulaTotalValue2', totalValue.toFixed(2));
+            // 注意：原HTML中没有 id 为 formulaInvestment 的元素，这里不再赋值以避免报错
+            setText('formulaInvestment2', impermanentLoss.toFixed(2));
+
+            // 价值变化百分比计算
+            setText('formulaTotalValue3', totalValue.toFixed(2));
+            setText('formulaInvestment3', investmentAmount.toFixed(2));
+            setText('formulaInvestment3b', investmentAmount.toFixed(2));
+            setText('formulaValueChangePercent', totalValuePercent.toFixed(2));
+
+            // HODL价值
+            setText('formulaHodlValue', hodlValue.toFixed(2));
         }
 
         // 更新自定义滑块（供外部调用）
@@ -1003,135 +1109,138 @@
             // 如果当前价格超出新范围，调整到范围内
             if (currentPrice < sliderMinPrice) {
                 currentPrice = sliderMinPrice;
-                slider.value = sliderMinPrice;
             } else if (currentPrice > sliderMaxPrice) {
                 currentPrice = sliderMaxPrice;
-                slider.value = sliderMaxPrice;
             }
+
+            // 无论是否越界，都强制同步滑块与输入框到 currentPrice
+            slider.value = String(currentPrice);
+            const cpi = document.getElementById('currentPriceInput');
+            if (cpi) cpi.value = String(currentPrice);
+            updateSliderProgress();
         }
 
         // 更新价格标签
         function updatePriceLabels() {
             const priceChange = ((currentPrice - initialPrice) / initialPrice) * 100;
             document.getElementById('priceChangeLabel').textContent = priceChange.toFixed(2) + '%';
+            updateSliderProgress();
         }
 
-        // 计算Uniswap V3流动性（基于V3公式）
-        function calculateUniswapV3Liquidity(price) {
+        // 根据当前价格在滑块上的位置渲染进度色（左侧主色，右侧灰色）
+        function updateSliderProgress() {
+            const slider = document.getElementById('currentPrice');
+            if (!slider) return;
+            const min = Number(slider.min || 0);
+            const max = Number(slider.max || 100);
+            const val = Number(slider.value || currentPrice || 0);
+            const pct = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
+            const left = 'var(--primary-color)';
+            const right = '#ddd';
+            slider.style.background = `linear-gradient(90deg, ${left} ${pct}%, ${right} ${pct}%)`;
+        }
+
+        // 工具：每单位流动性在给定价格的代币数量
+        function perUnitAmountsAtPrice(price) {
+            const sl = Math.sqrt(lowerPrice);
+            const su = Math.sqrt(upperPrice);
+            const s = Math.sqrt(price);
+            return {
+                amountSolPerL: (su - s) / (s * su),
+                amountUsdcPerL: (s - sl)
+            };
+        }
+
+        // 计算 L 以及初始投入时的代币持仓（作为 HODL 基准）
+        function computeLiquidityAndInitialHoldings() {
             const sl = Math.sqrt(lowerPrice);
             const su = Math.sqrt(upperPrice);
             const sInit = Math.sqrt(initialPrice);
 
-            // 计算每单位流动性所需代币数量（在不同价格位置）
-            function perUnitAmountsAtPriceS(s) {
-                return {
-                    amountSolPerL: (su - s) / (s * su),
-                    amountUsdcPerL: (s - sl)
-                };
-            }
+            let L;
+            let initialSol = 0;
+            let initialUsdc = 0;
 
-            // 根据初始价格位置，计算每单位L的成本（以USDC计），从而得到L
-            let L; // 流动性规模
             if (initialPrice <= lowerPrice) {
-                // 初始价低于下限：仅需要SOL
                 const amountSolPerLAtLower = (su - sl) / (sl * su);
-                const valuePerL = amountSolPerLAtLower * initialPrice; // 以初始价计价
-                L = investmentAmount / valuePerL;
+                const valuePerL = amountSolPerLAtLower * initialPrice;
+                L = investmentAmount > 0 && valuePerL > 0 ? investmentAmount / valuePerL : 0;
+                initialSol = L * amountSolPerLAtLower;
+                initialUsdc = 0;
             } else if (initialPrice >= upperPrice) {
-                // 初始价高于上限：仅需要USDC
                 const amountUsdcPerLAtUpper = (su - sl);
-                const valuePerL = amountUsdcPerLAtUpper; // 已是USDC
-                L = investmentAmount / valuePerL;
+                const valuePerL = amountUsdcPerLAtUpper;
+                L = investmentAmount > 0 && valuePerL > 0 ? investmentAmount / valuePerL : 0;
+                initialSol = 0;
+                initialUsdc = L * amountUsdcPerLAtUpper;
             } else {
-                // 初始价在区间内：两种资产
-                const { amountSolPerL, amountUsdcPerL } = perUnitAmountsAtPriceS(sInit);
+                const { amountSolPerL, amountUsdcPerL } = perUnitAmountsAtPrice(initialPrice);
                 const valuePerL = amountSolPerL * initialPrice + amountUsdcPerL;
-                L = investmentAmount / valuePerL;
+                L = investmentAmount > 0 && valuePerL > 0 ? investmentAmount / valuePerL : 0;
+                initialSol = L * amountSolPerL;
+                initialUsdc = L * amountUsdcPerL;
             }
 
-            // 用同一份L，在当前价位计算持仓
-            const sNow = Math.sqrt(price);
-            let solAmount = 0;
-            let usdcAmount = 0;
+            return { L, initialSol, initialUsdc };
+        }
+
+        // 在任意价格，用既定 L 计算持仓数量
+        function calculateAmountsAtPrice(price, L) {
+            const sl = Math.sqrt(lowerPrice);
+            const su = Math.sqrt(upperPrice);
 
             if (price <= lowerPrice) {
-                // 区间下方：全是SOL，数量固定为在下限价位的数量
-                const amountSolAtLower = L * (su - sl) / (sl * su);
-                solAmount = amountSolAtLower;
-                usdcAmount = 0;
-            } else if (price >= upperPrice) {
-                // 区间上方：全是USDC，数量固定为在上限价位的数量
-                const amountUsdcAtUpper = L * (su - sl);
-                solAmount = 0;
-                usdcAmount = amountUsdcAtUpper;
-            } else {
-                // 区间内：按V3公式分解
-                const { amountSolPerL, amountUsdcPerL } = perUnitAmountsAtPriceS(sNow);
-                solAmount = L * amountSolPerL;
-                usdcAmount = L * amountUsdcPerL;
+                const sol = L * (su - sl) / (sl * su);
+                return { solAmount: sol, usdcAmount: 0 };
             }
-
-            return { solAmount, usdcAmount };
+            if (price >= upperPrice) {
+                const usdc = L * (su - sl);
+                return { solAmount: 0, usdcAmount: usdc };
+            }
+            const { amountSolPerL, amountUsdcPerL } = perUnitAmountsAtPrice(price);
+            return { solAmount: L * amountSolPerL, usdcAmount: L * amountUsdcPerL };
         }
 
         // 计算结果
         function calculateResults() {
-            const { solAmount, usdcAmount } = calculateUniswapV3Liquidity(currentPrice);
+            const { L, initialSol, initialUsdc } = computeLiquidityAndInitialHoldings();
+            const { solAmount, usdcAmount } = calculateAmountsAtPrice(currentPrice, L);
             
             // 计算总价值（LP仓位）
             const totalValue = solAmount * currentPrice + usdcAmount;
             const initialValue = investmentAmount;
             
-            // 基于初始配置计算 HODL 价值
-            const sl = Math.sqrt(lowerPrice);
-            const su = Math.sqrt(upperPrice);
-            const sInit = Math.sqrt(initialPrice);
-            function perUnitAmountsAtPriceS(s) {
-                return {
-                    amountSolPerL: (su - s) / (s * su),
-                    amountUsdcPerL: (s - sl)
-                };
-            }
-            let L_forHodl;
-            if (initialPrice <= lowerPrice) {
-                const amountSolPerLAtLower = (su - sl) / (sl * su);
-                const valuePerL = amountSolPerLAtLower * initialPrice;
-                L_forHodl = initialValue / valuePerL;
-            } else if (initialPrice >= upperPrice) {
-                const amountUsdcPerLAtUpper = (su - sl);
-                const valuePerL = amountUsdcPerLAtUpper;
-                L_forHodl = initialValue / valuePerL;
-            } else {
-                const { amountSolPerL, amountUsdcPerL } = perUnitAmountsAtPriceS(sInit);
-                const valuePerL = amountSolPerL * initialPrice + amountUsdcPerL;
-                L_forHodl = initialValue / valuePerL;
-            }
-            let hodlSol = 0, hodlUsdc = 0;
-            if (initialPrice <= lowerPrice) {
-                hodlSol = L_forHodl * (su - sl) / (sl * su);
-                hodlUsdc = 0;
-            } else if (initialPrice >= upperPrice) {
-                hodlSol = 0;
-                hodlUsdc = L_forHodl * (su - sl);
-            } else {
-                const { amountSolPerL, amountUsdcPerL } = perUnitAmountsAtPriceS(sInit);
-                hodlSol = L_forHodl * amountSolPerL;
-                hodlUsdc = L_forHodl * amountUsdcPerL;
-            }
-            const hodlValue = hodlSol * currentPrice + hodlUsdc;
+            // HODL 价值：持有初始投入对应的代币数量（不再再平衡）
+            const hodlValue = initialSol * currentPrice + initialUsdc;
             
             // 无常损失（相对HODL）
             const impermanentLoss = totalValue - hodlValue;
-            const totalValuePercent = ((totalValue - initialValue) / initialValue * 100);
+            const totalValuePercent = initialValue > 0 ? ((totalValue - initialValue) / initialValue * 100) : 0;
             const impermanentLossPercent = hodlValue > 0 ? ((totalValue / hodlValue - 1) * 100) : 0;
             
             // 更新显示
             document.getElementById('totalValue').textContent = '$' + totalValue.toFixed(2);
             document.getElementById('impermanentLoss').textContent = '$' + impermanentLoss.toFixed(2);
             
-            // 更新百分比显示
-            document.getElementById('totalValuePercent').textContent = totalValuePercent.toFixed(2) + '%';
-            document.getElementById('impermanentLossPercent').textContent = impermanentLossPercent.toFixed(2) + '%';
+            // 更新百分比显示（含公式）
+            const tvPercentEl = document.getElementById('totalValuePercent');
+            const ilPercentEl = document.getElementById('impermanentLossPercent');
+            if (tvPercentEl) {
+                if (initialValue > 0) {
+                    const tvPercentStr = `${totalValuePercent.toFixed(2)}% = ((${totalValue.toFixed(2)} - ${initialValue.toFixed(2)}) ÷ ${initialValue.toFixed(2)}) × 100%`;
+                    tvPercentEl.textContent = tvPercentStr;
+                } else {
+                    tvPercentEl.textContent = '0%';
+                }
+            }
+            if (ilPercentEl) {
+                if (hodlValue > 0) {
+                    const ilPercentStr = `${impermanentLossPercent.toFixed(2)}% = ((${totalValue.toFixed(2)} - ${hodlValue.toFixed(2)}) ÷ ${hodlValue.toFixed(2)}) × 100%`;
+                    ilPercentEl.textContent = ilPercentStr;
+                } else {
+                    ilPercentEl.textContent = '0%';
+                }
+            }
             
             // 更新计算公式（第二块用HODL值替代投入资金）
             updateFormulaDisplay(solAmount, usdcAmount, totalValue, impermanentLoss, totalValuePercent, hodlValue);
@@ -1152,10 +1261,11 @@
             for (let price = Math.max(10, lowerPrice * 0.5); price <= Math.min(500, upperPrice * 2); price += (upperPrice - lowerPrice) / 40) {
                 priceRange.push(price.toFixed(2));
                 
-                const { solAmount, usdcAmount } = calculateUniswapV3Liquidity(price);
+                const { L, initialSol, initialUsdc } = computeLiquidityAndInitialHoldings();
+                const { solAmount, usdcAmount } = calculateAmountsAtPrice(price, L);
                 const totalValue = solAmount * price + usdcAmount;
-                const initialValue = initialSol * initialPrice;
-                const impermanentLoss = totalValue - initialValue;
+                const hodlValue = initialSol * price + initialUsdc;
+                const impermanentLoss = totalValue - hodlValue;
                 
                 impermanentLossData.push(impermanentLoss);
                 totalValueData.push(totalValue);
