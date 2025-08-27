@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uniswap V3计算器</title>
+    <style>
+        :root {
+            --primary-color: #ff6b6b;
+            --secondary-color: #4ecdc4;
+            --accent-color: #45b7d1;
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --border-color: #e9ecef;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 30px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .calculator-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--border-color);
+        }
+
+        .card h3 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 8px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.9em;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .price-range {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .slider-container {
+            margin: 15px 0;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+            border: none;
+        }
+
+        .slider-range-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .range-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .range-input-group label {
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .range-input-group input {
+            padding: 6px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .range-slider-container {
+            margin: 15px 0;
+        }
+
+
+
+        .range-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .range-header label {
+            margin: 0;
+            flex-shrink: 0;
+        }
+
+        .custom-range-slider {
+            margin-left: 20px;
+            flex: 1;
+        }
+
+        .range-track {
+            position: relative;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            margin: 20px 0;
+        }
+
+        .range-fill {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            background: var(--primary-color);
+            border-radius: 3px;
+            pointer-events: none;
+            will-change: left, width;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+        }
+
+        .range-handle {
+            position: absolute;
+            top: 50%;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border: 2px solid var(--primary-color);
+            border-radius: 50%;
+            cursor: grab;
+            transform: translate(-50%, -50%);
+            transition: transform 0.2s ease;
+            z-index: 10;
+            will-change: transform;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+        }
+
+        .range-handle:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .range-handle:active {
+            cursor: grabbing;
+            transform: translate(-50%, -50%) scale(1.05);
+        }
+
+        .handle-value {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--primary-color);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .range-handle:hover .handle-value {
+            opacity: 1;
+        }
+
+        .range-handle-min {
+            z-index: 11;
+        }
+
+        .range-handle-max {
+            z-index: 12;
+        }
+
+        .range-input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .formula-section {
+            margin-top: 20px;
+        }
+
+        .formula-item {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.02);
+            border-radius: 8px;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .formula-item h4 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+
+        .formula-content {
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        .formula-content > span {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .formula-detail {
+            margin-top: 8px;
+            padding: 10px;
+            background: rgba(78, 205, 196, 0.1);
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            color: var(--text-secondary);
+        }
+
+        .formula-detail span {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .form-actions {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .reset-btn {
+            background: var(--text-secondary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .reset-btn:hover {
+            background: #6c757d;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+
+        .result-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--border-color);
+        }
+
+        .result-value {
+            font-size: 1.6em;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 3px;
+        }
+
+        .result-label {
+            color: var(--text-secondary);
+            font-size: 0.8em;
+        }
+
+        .result-percentage {
+            color: var(--text-secondary);
+            font-size: 0.7em;
+            margin-top: 3px;
+            font-weight: 500;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .data-table th, .data-table td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            background: var(--primary-color);
+            color: white;
+            font-weight: 600;
+        }
+
+        .data-table tr:nth-child(even) {
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        .data-table tr:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            background: #e55a5a;
+        }
+
+        .back-btn {
+            background: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        .back-btn:hover {
+            background: #6c757d;
+        }
+
+        @media (max-width: 768px) {
+            .calculator-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .price-range {
+                grid-template-columns: 1fr;
+            }
+            
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+            <div class="card">
+            <h3>流动性提供设置</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="investmentAmount">投入资金 (USDC)</label>
+                    <input type="number" id="investmentAmount" value="10000" step="100" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="initialPrice">投入时SOL价格 (USDC)</label>
+                    <input type="number" id="initialPrice" value="100" step="0.1" min="0">
+                </div>
+                </div>
+                <div class="form-group">
+                <div class="range-header">
+                    <label>流动性价格区间 (USDC)</label>
+                    <div class="custom-range-slider">
+                        <div class="range-track">
+                            <div class="range-fill" id="rangeFill"></div>
+                            <div class="range-handle range-handle-min" id="rangeHandleMin" draggable="true">
+                                <div class="handle-value">50</div>
+                            </div>
+                            <div class="range-handle range-handle-max" id="rangeHandleMax" draggable="true">
+                                <div class="handle-value">200</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="range-input-row">
+                    <div class="range-input-group">
+                        <label for="lowerPrice">下限价格:</label>
+                    <input type="number" id="lowerPrice" value="50" step="0.1" min="0">
+                </div>
+                    <div class="range-input-group">
+                        <label for="upperPrice">上限价格:</label>
+                    <input type="number" id="upperPrice" value="200" step="0.1" min="0">
+                    </div>
+                </div>
+                </div>
+                <div class="form-group">
+                    <label for="currentPrice">当前SOL价格 (USDC)</label>
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span id="currentPriceLabel">100 USDC</span>
+                            <span id="priceChangeLabel">0%</span>
+                        </div>
+                    <input type="range" id="currentPrice" class="slider" value="100" step="0.1">
+                </div>
+                <div class="slider-range-controls">
+                    <div class="range-input-group">
+                        <label for="sliderMinPrice">滑块最小值:</label>
+                        <input type="number" id="sliderMinPrice" value="10" step="0.1" min="0">
+                    </div>
+                    <div class="range-input-group">
+                        <label for="sliderMaxPrice">滑块最大值:</label>
+                        <input type="number" id="sliderMaxPrice" value="500" step="0.1" min="0">
+                    </div>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn reset-btn" onclick="resetToDefaults()">重置为默认值</button>
+            </div>
+        </div>
+
+        <div class="results-grid">
+            <div class="result-card">
+                <div class="result-value" id="totalValue">$0</div>
+                <div class="result-label">当前总价值 (USDC)</div>
+                <div class="result-percentage" id="totalValuePercent">0%</div>
+            </div>
+            <div class="result-card">
+                <div class="result-value" id="impermanentLoss">$0</div>
+                <div class="result-label">无常损失 (%)</div>
+                <div class="result-percentage" id="impermanentLossPercent">0%</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>计算公式</h3>
+            <div class="formula-section">
+                <div class="formula-item">
+                    <h4>当前总价值计算</h4>
+                    <div class="formula-content">
+                        <span>当前总价值 = SOL数量 × 当前价格 + USDC数量</span>
+                        <div class="formula-detail">
+                            <span id="formulaSolAmount">0</span> SOL × <span id="formulaCurrentPrice">0</span> USDC + <span id="formulaUsdcAmount">0</span> USDC = <span id="formulaTotalValue">0</span> USDC
+                        </div>
+                    </div>
+                </div>
+                <div class="formula-item">
+                    <h4>无常损失计算</h4>
+                    <div class="formula-content">
+                        <span>无常损失 = 当前总价值 - 投入资金</span>
+                        <div class="formula-detail">
+                            <span id="formulaTotalValue2">0</span> USDC - <span id="formulaInvestment">0</span> USDC = <span id="formulaInvestment2">0</span> USDC
+                        </div>
+                    </div>
+                </div>
+                <div class="formula-item">
+                    <h4>价值变化百分比</h4>
+                    <div class="formula-content">
+                        <span>价值变化百分比 = (当前总价值 - 投入资金) ÷ 投入资金 × 100%</span>
+                        <div class="formula-detail">
+                            (<span id="formulaTotalValue3">0</span> - <span id="formulaInvestment3">0</span>) ÷ <span id="formulaInvestment3">0</span> × 100% = <span id="formulaValueChangePercent">0</span>%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 默认值
+        const DEFAULT_VALUES = {
+            investmentAmount: 10000,
+            initialPrice: 100,
+            lowerPrice: 50,
+            upperPrice: 200,
+            currentPrice: 100,
+            sliderMinPrice: 10,
+            sliderMaxPrice: 500
+        };
+
+        // 全局变量
+        let investmentAmount = DEFAULT_VALUES.investmentAmount;
+        let initialPrice = DEFAULT_VALUES.initialPrice;
+        let lowerPrice = DEFAULT_VALUES.lowerPrice;
+        let upperPrice = DEFAULT_VALUES.upperPrice;
+        let currentPrice = DEFAULT_VALUES.currentPrice;
+
+        // 保存值到localStorage
+        function saveValues() {
+            const values = {
+                investmentAmount,
+                initialPrice,
+                lowerPrice,
+                upperPrice,
+                currentPrice,
+                sliderMinPrice: parseFloat(document.getElementById('sliderMinPrice').value) || DEFAULT_VALUES.sliderMinPrice,
+                sliderMaxPrice: parseFloat(document.getElementById('sliderMaxPrice').value) || DEFAULT_VALUES.sliderMaxPrice
+            };
+            localStorage.setItem('uniswapV3Values', JSON.stringify(values));
+        }
+
+        // 从localStorage加载值
+        function loadValues() {
+            const saved = localStorage.getItem('uniswapV3Values');
+            if (saved) {
+                try {
+                    const values = JSON.parse(saved);
+                    investmentAmount = values.investmentAmount || DEFAULT_VALUES.investmentAmount;
+                    initialPrice = values.initialPrice || DEFAULT_VALUES.initialPrice;
+                    lowerPrice = values.lowerPrice || DEFAULT_VALUES.lowerPrice;
+                    upperPrice = values.upperPrice || DEFAULT_VALUES.upperPrice;
+                    currentPrice = values.currentPrice || DEFAULT_VALUES.currentPrice;
+                    
+                    // 更新输入框的值
+                    document.getElementById('investmentAmount').value = investmentAmount;
+                    document.getElementById('initialPrice').value = initialPrice;
+                    document.getElementById('currentPrice').value = currentPrice;
+                    document.getElementById('sliderMinPrice').value = values.sliderMinPrice || DEFAULT_VALUES.sliderMinPrice;
+                    document.getElementById('sliderMaxPrice').value = values.sliderMaxPrice || DEFAULT_VALUES.sliderMaxPrice;
+                    
+                    // 更新自定义滑块
+                    updateCustomRangeSlider();
+                    
+                    // 更新数字输入框
+                    document.getElementById('lowerPrice').value = lowerPrice;
+                    document.getElementById('upperPrice').value = upperPrice;
+                } catch (e) {
+                    console.error('加载保存的值失败:', e);
+                }
+            }
+        }
+
+        // 重置为默认值
+        function resetToDefaults() {
+            if (confirm('确定要重置所有值为默认值吗？')) {
+                // 重置全局变量
+                investmentAmount = DEFAULT_VALUES.investmentAmount;
+                initialPrice = DEFAULT_VALUES.initialPrice;
+                lowerPrice = DEFAULT_VALUES.lowerPrice;
+                upperPrice = DEFAULT_VALUES.upperPrice;
+                currentPrice = DEFAULT_VALUES.currentPrice;
+                
+                // 重置输入框
+                document.getElementById('investmentAmount').value = investmentAmount;
+                document.getElementById('initialPrice').value = initialPrice;
+                document.getElementById('currentPrice').value = currentPrice;
+                document.getElementById('sliderMinPrice').value = DEFAULT_VALUES.sliderMinPrice;
+                document.getElementById('sliderMaxPrice').value = DEFAULT_VALUES.sliderMaxPrice;
+                
+                // 重置自定义滑块
+                updateCustomRangeSlider();
+                
+                // 重置数字输入框
+                document.getElementById('lowerPrice').value = lowerPrice;
+                document.getElementById('upperPrice').value = upperPrice;
+                
+                // 更新界面
+                updateSliderRange();
+                updatePriceLabels();
+                calculateResults();
+                
+                // 清除localStorage
+                localStorage.removeItem('uniswapV3Values');
+            }
+        }
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            loadValues(); // 先加载保存的值
+            initializeInputs();
+            updateSliderRange();
+            calculateResults();
+        });
+
+        // 初始化输入框
+        function initializeInputs() {
+            document.getElementById('investmentAmount').addEventListener('input', function(e) {
+                investmentAmount = parseFloat(e.target.value) || 0;
+                calculateResults();
+                saveValues(); // 保存值
+            });
+
+            document.getElementById('initialPrice').addEventListener('input', function(e) {
+                initialPrice = parseFloat(e.target.value) || 0;
+                calculateResults();
+                saveValues(); // 保存值
+            });
+
+            // 初始化自定义双端滑块
+            initializeCustomRangeSlider();
+
+            // 数字输入框的事件监听器
+            document.getElementById('lowerPrice').addEventListener('input', function(e) {
+                const minValue = parseFloat(e.target.value) || 0;
+                const maxValue = parseFloat(document.getElementById('upperPrice').value) || 200;
+                
+                // 确保最小值不超过最大值
+                if (minValue >= maxValue) {
+                    e.target.value = maxValue - 0.1;
+                    lowerPrice = maxValue - 0.1;
+                } else {
+                    lowerPrice = minValue;
+                }
+                
+                // 更新自定义滑块
+                updateCustomRangeSlider();
+                
+                updateSliderRange();
+                calculateResults();
+                saveValues(); // 保存值
+            });
+
+            document.getElementById('upperPrice').addEventListener('input', function(e) {
+                const maxValue = parseFloat(e.target.value) || 200;
+                const minValue = parseFloat(document.getElementById('lowerPrice').value) || 50;
+                
+                // 确保最大值不小于最小值
+                if (maxValue <= minValue) {
+                    e.target.value = minValue + 0.1;
+                    upperPrice = minValue + 0.1;
+                } else {
+                    upperPrice = maxValue;
+                }
+                
+                // 更新自定义滑块
+                updateCustomRangeSlider();
+                
+                updateSliderRange();
+                calculateResults();
+                saveValues(); // 保存值
+            });
+
+            document.getElementById('currentPrice').addEventListener('input', function(e) {
+                currentPrice = parseFloat(e.target.value) || 0;
+                updatePriceLabels();
+                calculateResults();
+                saveValues(); // 保存值
+            });
+
+            document.getElementById('sliderMinPrice').addEventListener('input', function(e) {
+                updateSliderRange();
+                updatePriceLabels();
+                calculateResults();
+                saveValues(); // 保存值
+            });
+
+            document.getElementById('sliderMaxPrice').addEventListener('input', function(e) {
+                updateSliderRange();
+                updatePriceLabels();
+                calculateResults();
+                saveValues(); // 保存值
+            });
+        }
+
+
+
+        // 自定义双端滑块
+        function initializeCustomRangeSlider() {
+            const track = document.querySelector('.range-track');
+            const minHandle = document.getElementById('rangeHandleMin');
+            const maxHandle = document.getElementById('rangeHandleMax');
+            const rangeFill = document.getElementById('rangeFill');
+            
+            let isDragging = false;
+            let currentHandle = null;
+            const trackRect = track.getBoundingClientRect();
+            const trackWidth = track.offsetWidth;
+            
+            // 设置初始位置
+            updateRangeSlider();
+            
+            // 鼠标事件
+            minHandle.addEventListener('mousedown', startDrag);
+            maxHandle.addEventListener('mousedown', startDrag);
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDrag);
+            
+            // 触摸事件
+            minHandle.addEventListener('touchstart', startDrag);
+            maxHandle.addEventListener('touchstart', startDrag);
+            document.addEventListener('touchmove', drag);
+            document.addEventListener('touchend', stopDrag);
+            
+            function startDrag(e) {
+                e.preventDefault();
+                isDragging = true;
+                currentHandle = e.target;
+                currentHandle.style.cursor = 'grabbing';
+            }
+            
+            function drag(e) {
+                if (!isDragging || !currentHandle) return;
+                
+                e.preventDefault();
+                const clientX = e.type === 'mousemove' ? e.clientX : e.touches[0].clientX;
+                const trackRect = track.getBoundingClientRect();
+                const clickX = clientX - trackRect.left;
+                const percentage = Math.max(0, Math.min(1, clickX / track.offsetWidth));
+                
+                if (currentHandle === minHandle) {
+                    // 限制最小值不超过最大值
+                    const maxPercentage = (upperPrice - 10) / 990;
+                    const newPercentage = Math.min(percentage, maxPercentage);
+                    lowerPrice = Math.round(newPercentage * 990 + 10);
+                    lowerPrice = Math.max(10, lowerPrice);
+                } else {
+                    // 限制最大值不小于最小值
+                    const minPercentage = (lowerPrice - 10) / 990;
+                    const newPercentage = Math.max(percentage, minPercentage);
+                    upperPrice = Math.round(newPercentage * 990 + 10);
+                    upperPrice = Math.min(1000, upperPrice);
+                }
+                
+                // 更新滑块位置、填充和输入框值
+                updateRangeSliderOnly();
+                updateNumberInputs();
+            }
+            
+            function stopDrag() {
+                if (isDragging && currentHandle) {
+                    currentHandle.style.cursor = 'grab';
+                    
+                    // 拖拽结束时更新计算结果和保存
+                    calculateResults();
+                    saveValues();
+                }
+                isDragging = false;
+                currentHandle = null;
+            }
+            
+            function updateRangeSlider() {
+                const minPercentage = (lowerPrice - 10) / 990;
+                const maxPercentage = (upperPrice - 10) / 990;
+                
+                minHandle.style.left = (minPercentage * 100) + '%';
+                maxHandle.style.left = (maxPercentage * 100) + '%';
+                
+                rangeFill.style.left = (minPercentage * 100) + '%';
+                rangeFill.style.width = ((maxPercentage - minPercentage) * 100) + '%';
+                
+                // 更新手柄上的数值显示
+                minHandle.querySelector('.handle-value').textContent = lowerPrice;
+                maxHandle.querySelector('.handle-value').textContent = upperPrice;
+            }
+
+            // 轻量级更新函数，只更新滑块位置和填充
+            function updateRangeSliderOnly() {
+                const minPercentage = (lowerPrice - 10) / 990;
+                const maxPercentage = (upperPrice - 10) / 990;
+                
+                minHandle.style.left = (minPercentage * 100) + '%';
+                maxHandle.style.left = (maxPercentage * 100) + '%';
+                
+                rangeFill.style.left = (minPercentage * 100) + '%';
+                rangeFill.style.width = ((maxPercentage - minPercentage) * 100) + '%';
+                
+                // 更新手柄上的数值显示
+                minHandle.querySelector('.handle-value').textContent = lowerPrice;
+                maxHandle.querySelector('.handle-value').textContent = upperPrice;
+            }
+            
+
+            
+            function updateNumberInputs() {
+                document.getElementById('lowerPrice').value = lowerPrice;
+                document.getElementById('upperPrice').value = upperPrice;
+            }
+        }
+
+        // 更新公式显示
+        function updateFormulaDisplay(solAmount, usdcAmount, totalValue, impermanentLoss, totalValuePercent) {
+            // 更新当前总价值计算
+            document.getElementById('formulaSolAmount').textContent = solAmount.toFixed(4);
+            document.getElementById('formulaCurrentPrice').textContent = currentPrice.toFixed(2);
+            document.getElementById('formulaUsdcAmount').textContent = usdcAmount.toFixed(2);
+            document.getElementById('formulaTotalValue').textContent = totalValue.toFixed(2);
+            
+            // 更新无常损失计算
+            document.getElementById('formulaTotalValue2').textContent = totalValue.toFixed(2);
+            document.getElementById('formulaInvestment').textContent = investmentAmount.toFixed(2);
+            document.getElementById('formulaImpermanentLoss').textContent = impermanentLoss.toFixed(2);
+            
+            // 更新价值变化百分比计算
+            document.getElementById('formulaTotalValue3').textContent = totalValue.toFixed(2);
+            document.getElementById('formulaInvestment3').textContent = investmentAmount.toFixed(2);
+            document.getElementById('formulaValueChangePercent').textContent = totalValuePercent.toFixed(2);
+        }
+
+        // 更新自定义滑块（供外部调用）
+        function updateCustomRangeSlider() {
+            const minHandle = document.getElementById('rangeHandleMin');
+            const maxHandle = document.getElementById('rangeHandleMax');
+            const rangeFill = document.getElementById('rangeFill');
+            
+            if (minHandle && maxHandle && rangeFill) {
+                const minPercentage = (lowerPrice - 10) / 990;
+                const maxPercentage = (upperPrice - 10) / 990;
+                
+                minHandle.style.left = (minPercentage * 100) + '%';
+                maxHandle.style.left = (maxPercentage * 100) + '%';
+                
+                rangeFill.style.left = (minPercentage * 100) + '%';
+                rangeFill.style.width = ((maxPercentage - minPercentage) * 100) + '%';
+                
+                // 更新手柄上的数值显示
+                minHandle.querySelector('.handle-value').textContent = lowerPrice;
+                maxHandle.querySelector('.handle-value').textContent = upperPrice;
+            }
+        }
+
+        // 更新滑块范围
+        function updateSliderRange() {
+            const slider = document.getElementById('currentPrice');
+            const sliderMinPrice = parseFloat(document.getElementById('sliderMinPrice').value) || 0.1;
+            const sliderMaxPrice = parseFloat(document.getElementById('sliderMaxPrice').value) || 500;
+            
+            slider.min = sliderMinPrice;
+            slider.max = sliderMaxPrice;
+            
+            // 如果当前价格超出新范围，调整到范围内
+            if (currentPrice < sliderMinPrice) {
+                currentPrice = sliderMinPrice;
+                slider.value = sliderMinPrice;
+            } else if (currentPrice > sliderMaxPrice) {
+                currentPrice = sliderMaxPrice;
+                slider.value = sliderMaxPrice;
+            }
+        }
+
+        // 更新价格标签
+        function updatePriceLabels() {
+            document.getElementById('currentPriceLabel').textContent = currentPrice.toFixed(2) + ' USDC';
+            const priceChange = ((currentPrice - initialPrice) / initialPrice) * 100;
+            document.getElementById('priceChangeLabel').textContent = priceChange.toFixed(2) + '%';
+        }
+
+        // 计算Uniswap V3流动性
+        function calculateUniswapV3Liquidity(price) {
+            if (price <= lowerPrice || price >= upperPrice) {
+                return { solAmount: 0, usdcAmount: 0 };
+            }
+
+            // 基于投入资金计算初始流动性
+            // 在初始价格下，投入资金会按照50/50分配
+            const initialSolAmount = (investmentAmount / 2) / initialPrice;
+            const initialUsdcAmount = investmentAmount / 2;
+            
+            // 计算价格变化比例
+            const priceChangeRatio = price / initialPrice;
+            
+            // 使用简化的V3模型 - 更合理的资产重新分配
+            let solAmount, usdcAmount;
+            
+            if (price <= initialPrice) {
+                // 价格下跌，SOL增加，USDC减少
+                // 使用更温和的重新分配模型，避免极端损失
+                const solIncrease = 1 + (1 - priceChangeRatio) * 0.2; // 最多增加20%
+                const usdcDecrease = 1 - (1 - priceChangeRatio) * 0.2; // 最多减少20%
+                
+                solAmount = initialSolAmount * solIncrease;
+                usdcAmount = initialUsdcAmount * usdcDecrease;
+            } else {
+                // 价格上涨，SOL减少，USDC增加
+                // 使用更温和的重新分配模型，避免极端损失
+                const solDecrease = 1 - (priceChangeRatio - 1) * 0.2; // 最多减少20%
+                const usdcIncrease = 1 + (priceChangeRatio - 1) * 0.2; // 最多增加20%
+                
+                solAmount = initialSolAmount * solDecrease;
+                usdcAmount = initialUsdcAmount * usdcIncrease;
+            }
+
+            // 验证：当价格等于初始价格时，总价值应该等于投入资金
+            if (Math.abs(price - initialPrice) < 0.01) {
+                return { solAmount: initialSolAmount, usdcAmount: initialUsdcAmount };
+            }
+
+            return { solAmount, usdcAmount };
+        }
+
+        // 计算结果
+        function calculateResults() {
+            const { solAmount, usdcAmount } = calculateUniswapV3Liquidity(currentPrice);
+            
+            // 计算总价值
+            const totalValue = solAmount * currentPrice + usdcAmount;
+            const initialValue = investmentAmount;
+            
+            // 计算无常损失
+            const impermanentLoss = totalValue - initialValue;
+            
+            // 计算百分比
+            const totalValuePercent = ((totalValue - initialValue) / initialValue * 100);
+            const impermanentLossPercent = (impermanentLoss / initialValue * 100);
+            
+            // 更新显示
+            document.getElementById('totalValue').textContent = '$' + totalValue.toFixed(2);
+            document.getElementById('impermanentLoss').textContent = '$' + impermanentLoss.toFixed(2);
+            
+            // 更新百分比显示
+            document.getElementById('totalValuePercent').textContent = totalValuePercent.toFixed(2) + '%';
+            document.getElementById('impermanentLossPercent').textContent = impermanentLossPercent.toFixed(2) + '%';
+            
+            // 更新计算公式
+            updateFormulaDisplay(solAmount, usdcAmount, totalValue, impermanentLoss, totalValuePercent);
+            
+            // 更新价格标签
+            updatePriceLabels();
+        }
+
+        // 更新图表
+        function updateChart() {
+            if (!impermanentLossChart) return;
+            
+            const priceRange = [];
+            const impermanentLossData = [];
+            const totalValueData = [];
+            
+            // 生成价格范围数据点
+            for (let price = Math.max(10, lowerPrice * 0.5); price <= Math.min(500, upperPrice * 2); price += (upperPrice - lowerPrice) / 40) {
+                priceRange.push(price.toFixed(2));
+                
+                const { solAmount, usdcAmount } = calculateUniswapV3Liquidity(price);
+                const totalValue = solAmount * price + usdcAmount;
+                const initialValue = initialSol * initialPrice;
+                const impermanentLoss = totalValue - initialValue;
+                
+                impermanentLossData.push(impermanentLoss);
+                totalValueData.push(totalValue);
+            }
+            
+            // 更新图表数据
+            impermanentLossChart.data.labels = priceRange;
+            impermanentLossChart.data.datasets[0].data = impermanentLossData;
+            impermanentLossChart.data.datasets[1].data = totalValueData;
+            impermanentLossChart.update();
+        }
+    </script>
+</body>
+</html>
