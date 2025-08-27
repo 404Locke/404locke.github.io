@@ -59,7 +59,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         .card {
@@ -289,10 +289,13 @@
 
         .formula-section {
             margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
         }
 
         .formula-item {
-            margin-bottom: 25px;
+            margin-bottom: 0;
             padding: 15px;
             background: rgba(0, 0, 0, 0.02);
             border-radius: 8px;
@@ -353,8 +356,8 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
-            margin-top: 30px;
-            margin-bottom: 30px;
+            margin-top: 15px;
+            margin-bottom: 15px;
         }
 
         .result-card {
@@ -453,6 +456,15 @@
             .results-grid {
                 grid-template-columns: 1fr;
             }
+            
+            .formula-section {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .formula-item {
+                margin-bottom: 15px;
+            }
         }
     </style>
 </head>
@@ -478,10 +490,10 @@
                             <div class="range-fill" id="rangeFill"></div>
                             <div class="range-handle range-handle-min" id="rangeHandleMin" draggable="true">
                                 <div class="handle-value">50</div>
-                            </div>
+                </div>
                             <div class="range-handle range-handle-max" id="rangeHandleMax" draggable="true">
                                 <div class="handle-value">200</div>
-                            </div>
+            </div>
                         </div>
                     </div>
                 </div>
@@ -500,16 +512,16 @@
                     <label for="currentPrice">当前SOL价格 (USDC)</label>
                     <div class="slider-container">
                         <div class="slider-label">
-                            <span id="currentPriceLabel">100 USDC</span>
+                            <input type="number" id="currentPriceInput" value="100" step="0.1" min="0" style="width: 140px; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 14px;">
                             <span id="priceChangeLabel">0%</span>
                         </div>
                     <input type="range" id="currentPrice" class="slider" value="100" step="0.1">
-                </div>
+                    </div>
                 <div class="slider-range-controls">
                     <div class="range-input-group">
                         <label for="sliderMinPrice">滑块最小值:</label>
                         <input type="number" id="sliderMinPrice" value="10" step="0.1" min="0">
-                    </div>
+                </div>
                     <div class="range-input-group">
                         <label for="sliderMaxPrice">滑块最大值:</label>
                         <input type="number" id="sliderMaxPrice" value="500" step="0.1" min="0">
@@ -532,7 +544,7 @@
                 <div class="result-label">无常损失 (%)</div>
                 <div class="result-percentage" id="impermanentLossPercent">0%</div>
             </div>
-        </div>
+            </div>
 
         <div class="card">
             <h3>计算公式</h3>
@@ -543,17 +555,17 @@
                         <span>当前总价值 = SOL数量 × 当前价格 + USDC数量</span>
                         <div class="formula-detail">
                             <span id="formulaSolAmount">0</span> SOL × <span id="formulaCurrentPrice">0</span> USDC + <span id="formulaUsdcAmount">0</span> USDC = <span id="formulaTotalValue">0</span> USDC
-                        </div>
-                    </div>
-                </div>
+            </div>
+            </div>
+            </div>
                 <div class="formula-item">
                     <h4>无常损失计算</h4>
                     <div class="formula-content">
-                        <span>无常损失 = 当前总价值 - 投入资金</span>
+                        <span>无常损失 = 当前总价值 - HODL价值</span>
                         <div class="formula-detail">
-                            <span id="formulaTotalValue2">0</span> USDC - <span id="formulaInvestment">0</span> USDC = <span id="formulaInvestment2">0</span> USDC
-                        </div>
-                    </div>
+                            <span id="formulaTotalValue2">0</span> USDC - <span id="formulaHodlValue">0</span> USDC = <span id="formulaInvestment2">0</span> USDC
+            </div>
+        </div>
                 </div>
                 <div class="formula-item">
                     <h4>价值变化百分比</h4>
@@ -617,6 +629,8 @@
                     document.getElementById('investmentAmount').value = investmentAmount;
                     document.getElementById('initialPrice').value = initialPrice;
                     document.getElementById('currentPrice').value = currentPrice;
+                    const cpi = document.getElementById('currentPriceInput');
+                    if (cpi) cpi.value = currentPrice;
                     document.getElementById('sliderMinPrice').value = values.sliderMinPrice || DEFAULT_VALUES.sliderMinPrice;
                     document.getElementById('sliderMaxPrice').value = values.sliderMaxPrice || DEFAULT_VALUES.sliderMaxPrice;
                     
@@ -646,6 +660,8 @@
                 document.getElementById('investmentAmount').value = investmentAmount;
                 document.getElementById('initialPrice').value = initialPrice;
                 document.getElementById('currentPrice').value = currentPrice;
+                const cpi2 = document.getElementById('currentPriceInput');
+                if (cpi2) cpi2.value = currentPrice;
                 document.getElementById('sliderMinPrice').value = DEFAULT_VALUES.sliderMinPrice;
                 document.getElementById('sliderMaxPrice').value = DEFAULT_VALUES.sliderMaxPrice;
                 
@@ -677,13 +693,21 @@
         // 初始化输入框
         function initializeInputs() {
             document.getElementById('investmentAmount').addEventListener('input', function(e) {
-                investmentAmount = parseFloat(e.target.value) || 0;
+                const raw = e.target.value;
+                if (raw === '' || raw === '-' || raw === '.') return;
+                const val = Number(raw);
+                if (Number.isNaN(val)) return;
+                investmentAmount = val;
                 calculateResults();
                 saveValues(); // 保存值
             });
 
             document.getElementById('initialPrice').addEventListener('input', function(e) {
-                initialPrice = parseFloat(e.target.value) || 0;
+                const raw = e.target.value;
+                if (raw === '' || raw === '-' || raw === '.') return;
+                const val = Number(raw);
+                if (Number.isNaN(val)) return;
+                initialPrice = val;
                 calculateResults();
                 saveValues(); // 保存值
             });
@@ -693,51 +717,105 @@
 
             // 数字输入框的事件监听器
             document.getElementById('lowerPrice').addEventListener('input', function(e) {
-                const minValue = parseFloat(e.target.value) || 0;
-                const maxValue = parseFloat(document.getElementById('upperPrice').value) || 200;
-                
-                // 确保最小值不超过最大值
-                if (minValue >= maxValue) {
-                    e.target.value = maxValue - 0.1;
-                    lowerPrice = maxValue - 0.1;
-                } else {
+                const raw = e.target.value;
+                if (raw === '' || raw === '-' || raw === '.') return;
+                const minValue = Number(raw);
+                if (Number.isNaN(minValue)) return;
+                const upperRaw = document.getElementById('upperPrice').value;
+                const maxValue = Number(upperRaw);
+                // 仅当双方有效且 lower < upper 时，才更新与联动
+                if (!Number.isNaN(maxValue) && minValue < maxValue) {
                     lowerPrice = minValue;
+                    updateCustomRangeSlider();
+                    updateSliderRange();
+                calculateResults();
+                    saveValues();
                 }
-                
-                // 更新自定义滑块
+            });
+
+            document.getElementById('lowerPrice').addEventListener('change', function(e) {
+                let minValue = Number(e.target.value);
+                if (Number.isNaN(minValue)) {
+                    minValue = lowerPrice; // 还原
+                }
+                let maxValue = Number(document.getElementById('upperPrice').value);
+                if (Number.isNaN(maxValue)) maxValue = upperPrice;
+                if (minValue >= maxValue) {
+                    minValue = Math.max(0, maxValue - 0.1);
+                    e.target.value = minValue.toString();
+                }
+                lowerPrice = minValue;
                 updateCustomRangeSlider();
-                
                 updateSliderRange();
                 calculateResults();
-                saveValues(); // 保存值
+                saveValues();
             });
 
             document.getElementById('upperPrice').addEventListener('input', function(e) {
-                const maxValue = parseFloat(e.target.value) || 200;
-                const minValue = parseFloat(document.getElementById('lowerPrice').value) || 50;
-                
-                // 确保最大值不小于最小值
-                if (maxValue <= minValue) {
-                    e.target.value = minValue + 0.1;
-                    upperPrice = minValue + 0.1;
-                } else {
+                const raw = e.target.value;
+                if (raw === '' || raw === '-' || raw === '.') return;
+                const maxValue = Number(raw);
+                if (Number.isNaN(maxValue)) return;
+                const lowerRaw = document.getElementById('lowerPrice').value;
+                const minValue = Number(lowerRaw);
+                // 仅当双方有效且 lower < upper 时，才更新与联动
+                if (!Number.isNaN(minValue) && maxValue > minValue) {
                     upperPrice = maxValue;
+                    updateCustomRangeSlider();
+                    updateSliderRange();
+                calculateResults();
+                    saveValues();
                 }
-                
-                // 更新自定义滑块
+            });
+
+            document.getElementById('upperPrice').addEventListener('change', function(e) {
+                let maxValue = Number(e.target.value);
+                if (Number.isNaN(maxValue)) {
+                    maxValue = upperPrice; // 还原
+                }
+                let minValue = Number(document.getElementById('lowerPrice').value);
+                if (Number.isNaN(minValue)) minValue = lowerPrice;
+                if (maxValue <= minValue) {
+                    maxValue = minValue + 0.1;
+                    e.target.value = maxValue.toString();
+                }
+                upperPrice = maxValue;
                 updateCustomRangeSlider();
-                
                 updateSliderRange();
                 calculateResults();
-                saveValues(); // 保存值
+                saveValues();
             });
 
             document.getElementById('currentPrice').addEventListener('input', function(e) {
-                currentPrice = parseFloat(e.target.value) || 0;
+                const raw = e.target.value;
+                if (raw === '' || raw === '-' || raw === '.') return;
+                const val = Number(raw);
+                if (Number.isNaN(val)) return;
+                currentPrice = val;
+                // 同步上方输入框
+                const inputEl = document.getElementById('currentPriceInput');
+                if (inputEl) inputEl.value = raw;
                 updatePriceLabels();
                 calculateResults();
                 saveValues(); // 保存值
             });
+
+            const inputEl = document.getElementById('currentPriceInput');
+            if (inputEl) {
+                inputEl.addEventListener('input', function(e) {
+                    const raw = e.target.value;
+                    if (raw === '' || raw === '-' || raw === '.') return;
+                    const val = Number(raw);
+                    if (Number.isNaN(val)) return;
+                    currentPrice = val;
+                    // 同步滑块
+                    const sliderEl = document.getElementById('currentPrice');
+                    if (sliderEl) sliderEl.value = raw;
+                    updatePriceLabels();
+                    calculateResults();
+                    saveValues();
+                });
+            }
 
             document.getElementById('sliderMinPrice').addEventListener('input', function(e) {
                 updateSliderRange();
@@ -870,7 +948,7 @@
         }
 
         // 更新公式显示
-        function updateFormulaDisplay(solAmount, usdcAmount, totalValue, impermanentLoss, totalValuePercent) {
+        function updateFormulaDisplay(solAmount, usdcAmount, totalValue, impermanentLoss, totalValuePercent, hodlValue) {
             // 更新当前总价值计算
             document.getElementById('formulaSolAmount').textContent = solAmount.toFixed(4);
             document.getElementById('formulaCurrentPrice').textContent = currentPrice.toFixed(2);
@@ -880,12 +958,15 @@
             // 更新无常损失计算
             document.getElementById('formulaTotalValue2').textContent = totalValue.toFixed(2);
             document.getElementById('formulaInvestment').textContent = investmentAmount.toFixed(2);
-            document.getElementById('formulaImpermanentLoss').textContent = impermanentLoss.toFixed(2);
+            document.getElementById('formulaInvestment2').textContent = impermanentLoss.toFixed(2);
             
             // 更新价值变化百分比计算
             document.getElementById('formulaTotalValue3').textContent = totalValue.toFixed(2);
             document.getElementById('formulaInvestment3').textContent = investmentAmount.toFixed(2);
             document.getElementById('formulaValueChangePercent').textContent = totalValuePercent.toFixed(2);
+
+            // 更新HODL价值计算
+            document.getElementById('formulaHodlValue').textContent = hodlValue.toFixed(2);
         }
 
         // 更新自定义滑块（供外部调用）
@@ -931,49 +1012,63 @@
 
         // 更新价格标签
         function updatePriceLabels() {
-            document.getElementById('currentPriceLabel').textContent = currentPrice.toFixed(2) + ' USDC';
             const priceChange = ((currentPrice - initialPrice) / initialPrice) * 100;
             document.getElementById('priceChangeLabel').textContent = priceChange.toFixed(2) + '%';
         }
 
-        // 计算Uniswap V3流动性
+        // 计算Uniswap V3流动性（基于V3公式）
         function calculateUniswapV3Liquidity(price) {
-            if (price <= lowerPrice || price >= upperPrice) {
-                return { solAmount: 0, usdcAmount: 0 };
+            const sl = Math.sqrt(lowerPrice);
+            const su = Math.sqrt(upperPrice);
+            const sInit = Math.sqrt(initialPrice);
+
+            // 计算每单位流动性所需代币数量（在不同价格位置）
+            function perUnitAmountsAtPriceS(s) {
+                return {
+                    amountSolPerL: (su - s) / (s * su),
+                    amountUsdcPerL: (s - sl)
+                };
             }
 
-            // 基于投入资金计算初始流动性
-            // 在初始价格下，投入资金会按照50/50分配
-            const initialSolAmount = (investmentAmount / 2) / initialPrice;
-            const initialUsdcAmount = investmentAmount / 2;
-            
-            // 计算价格变化比例
-            const priceChangeRatio = price / initialPrice;
-            
-            // 使用简化的V3模型 - 更合理的资产重新分配
-            let solAmount, usdcAmount;
-            
-            if (price <= initialPrice) {
-                // 价格下跌，SOL增加，USDC减少
-                // 使用更温和的重新分配模型，避免极端损失
-                const solIncrease = 1 + (1 - priceChangeRatio) * 0.2; // 最多增加20%
-                const usdcDecrease = 1 - (1 - priceChangeRatio) * 0.2; // 最多减少20%
-                
-                solAmount = initialSolAmount * solIncrease;
-                usdcAmount = initialUsdcAmount * usdcDecrease;
+            // 根据初始价格位置，计算每单位L的成本（以USDC计），从而得到L
+            let L; // 流动性规模
+            if (initialPrice <= lowerPrice) {
+                // 初始价低于下限：仅需要SOL
+                const amountSolPerLAtLower = (su - sl) / (sl * su);
+                const valuePerL = amountSolPerLAtLower * initialPrice; // 以初始价计价
+                L = investmentAmount / valuePerL;
+            } else if (initialPrice >= upperPrice) {
+                // 初始价高于上限：仅需要USDC
+                const amountUsdcPerLAtUpper = (su - sl);
+                const valuePerL = amountUsdcPerLAtUpper; // 已是USDC
+                L = investmentAmount / valuePerL;
             } else {
-                // 价格上涨，SOL减少，USDC增加
-                // 使用更温和的重新分配模型，避免极端损失
-                const solDecrease = 1 - (priceChangeRatio - 1) * 0.2; // 最多减少20%
-                const usdcIncrease = 1 + (priceChangeRatio - 1) * 0.2; // 最多增加20%
-                
-                solAmount = initialSolAmount * solDecrease;
-                usdcAmount = initialUsdcAmount * usdcIncrease;
+                // 初始价在区间内：两种资产
+                const { amountSolPerL, amountUsdcPerL } = perUnitAmountsAtPriceS(sInit);
+                const valuePerL = amountSolPerL * initialPrice + amountUsdcPerL;
+                L = investmentAmount / valuePerL;
             }
 
-            // 验证：当价格等于初始价格时，总价值应该等于投入资金
-            if (Math.abs(price - initialPrice) < 0.01) {
-                return { solAmount: initialSolAmount, usdcAmount: initialUsdcAmount };
+            // 用同一份L，在当前价位计算持仓
+            const sNow = Math.sqrt(price);
+            let solAmount = 0;
+            let usdcAmount = 0;
+
+            if (price <= lowerPrice) {
+                // 区间下方：全是SOL，数量固定为在下限价位的数量
+                const amountSolAtLower = L * (su - sl) / (sl * su);
+                solAmount = amountSolAtLower;
+                usdcAmount = 0;
+            } else if (price >= upperPrice) {
+                // 区间上方：全是USDC，数量固定为在上限价位的数量
+                const amountUsdcAtUpper = L * (su - sl);
+                solAmount = 0;
+                usdcAmount = amountUsdcAtUpper;
+            } else {
+                // 区间内：按V3公式分解
+                const { amountSolPerL, amountUsdcPerL } = perUnitAmountsAtPriceS(sNow);
+                solAmount = L * amountSolPerL;
+                usdcAmount = L * amountUsdcPerL;
             }
 
             return { solAmount, usdcAmount };
@@ -983,16 +1078,52 @@
         function calculateResults() {
             const { solAmount, usdcAmount } = calculateUniswapV3Liquidity(currentPrice);
             
-            // 计算总价值
+            // 计算总价值（LP仓位）
             const totalValue = solAmount * currentPrice + usdcAmount;
             const initialValue = investmentAmount;
             
-            // 计算无常损失
-            const impermanentLoss = totalValue - initialValue;
+            // 基于初始配置计算 HODL 价值
+            const sl = Math.sqrt(lowerPrice);
+            const su = Math.sqrt(upperPrice);
+            const sInit = Math.sqrt(initialPrice);
+            function perUnitAmountsAtPriceS(s) {
+                return {
+                    amountSolPerL: (su - s) / (s * su),
+                    amountUsdcPerL: (s - sl)
+                };
+            }
+            let L_forHodl;
+            if (initialPrice <= lowerPrice) {
+                const amountSolPerLAtLower = (su - sl) / (sl * su);
+                const valuePerL = amountSolPerLAtLower * initialPrice;
+                L_forHodl = initialValue / valuePerL;
+            } else if (initialPrice >= upperPrice) {
+                const amountUsdcPerLAtUpper = (su - sl);
+                const valuePerL = amountUsdcPerLAtUpper;
+                L_forHodl = initialValue / valuePerL;
+            } else {
+                const { amountSolPerL, amountUsdcPerL } = perUnitAmountsAtPriceS(sInit);
+                const valuePerL = amountSolPerL * initialPrice + amountUsdcPerL;
+                L_forHodl = initialValue / valuePerL;
+            }
+            let hodlSol = 0, hodlUsdc = 0;
+            if (initialPrice <= lowerPrice) {
+                hodlSol = L_forHodl * (su - sl) / (sl * su);
+                hodlUsdc = 0;
+            } else if (initialPrice >= upperPrice) {
+                hodlSol = 0;
+                hodlUsdc = L_forHodl * (su - sl);
+            } else {
+                const { amountSolPerL, amountUsdcPerL } = perUnitAmountsAtPriceS(sInit);
+                hodlSol = L_forHodl * amountSolPerL;
+                hodlUsdc = L_forHodl * amountUsdcPerL;
+            }
+            const hodlValue = hodlSol * currentPrice + hodlUsdc;
             
-            // 计算百分比
+            // 无常损失（相对HODL）
+            const impermanentLoss = totalValue - hodlValue;
             const totalValuePercent = ((totalValue - initialValue) / initialValue * 100);
-            const impermanentLossPercent = (impermanentLoss / initialValue * 100);
+            const impermanentLossPercent = hodlValue > 0 ? ((totalValue / hodlValue - 1) * 100) : 0;
             
             // 更新显示
             document.getElementById('totalValue').textContent = '$' + totalValue.toFixed(2);
@@ -1002,8 +1133,8 @@
             document.getElementById('totalValuePercent').textContent = totalValuePercent.toFixed(2) + '%';
             document.getElementById('impermanentLossPercent').textContent = impermanentLossPercent.toFixed(2) + '%';
             
-            // 更新计算公式
-            updateFormulaDisplay(solAmount, usdcAmount, totalValue, impermanentLoss, totalValuePercent);
+            // 更新计算公式（第二块用HODL值替代投入资金）
+            updateFormulaDisplay(solAmount, usdcAmount, totalValue, impermanentLoss, totalValuePercent, hodlValue);
             
             // 更新价格标签
             updatePriceLabels();
