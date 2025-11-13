@@ -1,0 +1,17 @@
+{
+  "name": "uniswapv3-distribution-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local JSON-RPC proxy for Solana to bypass CORS and 403",
+  "main": "proxy.js",
+  "scripts": {
+    "start": "node proxy.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "node-fetch": "^2.6.12"
+  }
+}
+
+

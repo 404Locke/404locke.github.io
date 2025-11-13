@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uniswap V3流动池价格分布</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; background: #f8f9fa; color: #2c3e50; }
+      .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+      h1 { font-size: 22px; margin: 0 0 12px; }
+      .card { background: #fff; border: 1px solid rgba(0,0,0,.06); border-radius: 10px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,.05); }
+      .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+      input[type=text]{ flex: 1 1 420px; padding: 10px 12px; border: 1px solid #dcdfe6; border-radius: 8px; font-size: 14px; }
+      button{ padding: 10px 16px; background: #3498db; color: #fff; border: none; border-radius: 8px; cursor: pointer; }
+      button:disabled{ opacity:.6; cursor:not-allowed; }
+      .meta { font-size: 12px; color: #666; margin-top: 8px; }
+      .grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 16px; }
+      @media (min-width: 980px){ .grid { grid-template-columns: 2fr 1fr; } }
+      table{ width:100%; border-collapse: collapse; font-size: 13px; }
+      th, td{ padding: 8px; border-bottom: 1px solid #eee; text-align: left; }
+      th{ background: #fafafa; position: sticky; top:0; }
+      .badge{ display:inline-block; padding:2px 6px; border-radius:6px; background:#eef5ff; color:#2c3e50; font-size:12px; }
+      .error{ color:#c0392b; font-size:13px; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.1/lib/index.iife.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Uniswap V3流动池价格分布</h1>
+      <div class="card" style="margin-bottom:12px;">
+        <div class="row">
+          <input id="addressInput" type="text" placeholder="输入V3流动池/LP仓位地址（支持 BSC Pancake v3、Solana Whirlpools）">
+          <button id="queryBtn">查询</button>
+          <span id="chainBadge" class="badge">-</span>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <input id="customRpc" type="text" placeholder="可选：自定义 Solana RPC (含API Key) 例如 https://rpc.helius.xyz/?api-key=...">
+          <input id="timeoutMs" type="text" placeholder="可选：超时毫秒，默认20000" style="max-width:200px;">
+        </div>
+        <div id="hint" class="meta">自动识别链：BSC 0x开头；Solana Base58 地址（32-44字符）。</div>
+        <div id="status" class="meta"></div>
+        <div id="error" class="error"></div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <canvas id="distChart" height="260"></canvas>
+        </div>
+        <div class="card" style="max-height:420px; overflow:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>提供者</th>
+                <th>流动性</th>
+                <th>价格区间</th>
+              </tr>
+            </thead>
+            <tbody id="positionsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      /* eslint-disable */
+      (function(){
+        const addressInput = document.getElementById('addressInput');
+        const queryBtn = document.getElementById('queryBtn');
+        const chainBadge = document.getElementById('chainBadge');
+        const errorBox = document.getElementById('error');
+        const statusBox = document.getElementById('status');
+        const customRpcInput = document.getElementById('customRpc');
+        const timeoutMsInput = document.getElementById('timeoutMs');
+        const positionsBody = document.getElementById('positionsBody');
+        const ctx = document.getElementById('distChart').getContext('2d');
+
+        let chart;
+
+        // Explorer-style backends (no DEX-specific subgraphs)
+        const BSC_RPC = 'https://bsc-dataseed.binance.org';
+        const SOLANA_RPCS = [
+          'https://api.mainnet-beta.solana.com'
+        ];
+        const PROXY_BASES = [
+          'http://127.0.0.1:3001',
+          'http://127.0.0.1:3002',
+          'http://127.0.0.1:3011'
+        ];
+        let SELECTED_PROXY_BASE = '';
+        function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+        async function pickHealthyProxyBase(){
+          if(SELECTED_PROXY_BASE) return SELECTED_PROXY_BASE;
+          for(const base of PROXY_BASES){
+            try{
+              const ctrl = new AbortController();
+              const t = setTimeout(()=>ctrl.abort(), 2000);
+              const r = await fetch(`${base}/health`, { cache:'no-store', signal: ctrl.signal });
+              clearTimeout(t);
+              if(r.ok){ SELECTED_PROXY_BASE = base; return base; }
+            }catch(_e){ /* try next */ }
+          }
+          return '';
+        }
+
+        function setStatus(msg){ statusBox.textContent = msg || ''; }
+
+        function detectChainByAddress(addr){
+          if(!addr) return null;
+          const a = addr.trim();
+          if(a.startsWith('0x') && a.length === 42) return 'bsc';
+          // crude base58 length heuristic for Solana (32-44)
+          if(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(a)) return 'sol';
+          return null;
+        }
+
+        function setChainBadge(chain){
+          chainBadge.textContent = chain === 'bsc' ? 'BSC Pancake v3' : chain === 'sol' ? 'Solana Whirlpools' : '-';
+        }
+
+        addressInput.addEventListener('input', ()=>{
+          setChainBadge(detectChainByAddress(addressInput.value));
+        });
+
+        function renderChart(bins){
+          const labels = bins.map(b=>b.label);
+          const values = bins.map(b=>b.liquidity);
+          if(chart) chart.destroy();
+          chart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets: [{ label: '流动性', data: values, backgroundColor: 'rgba(52,152,219,0.5)', borderColor: 'rgba(52,152,219,1)', borderWidth: 1 }] },
+            options: { responsive: true, scales: { x: { ticks: { autoSkip: true, maxTicksLimit: 12 } }, y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+          });
+        }
+
+        function renderPositions(rows){
+          positionsBody.innerHTML = rows.map(r=>{
+            return `<tr><td>${r.owner}</td><td>${formatNumber(r.liquidity)}</td><td>[${r.priceLower} , ${r.priceUpper}]</td></tr>`;
+          }).join('');
+        }
+
+        function formatNumber(n){
+          if(n == null) return '-';
+          const x = Number(n);
+          if(!isFinite(x)) return String(n);
+          return x.toLocaleString(undefined, { maximumFractionDigits: 4 });
+        }
+
+        function tickToPrice(tick, token0Decimals, token1Decimals){
+          // price = 1.0001^tick * 10^(decimals0 - decimals1)
+          const exponent = tick * Math.log(1.0001);
+          const ratio = Math.exp(exponent);
+          const scale = Math.pow(10, (token0Decimals||0) - (token1Decimals||0));
+          return ratio * scale;
+        }
+
+        async function queryBscPoolViaRpc(poolAddress){
+          setStatus('BSC: 连接RPC查询池信息中...');
+          const provider = new ethers.providers.JsonRpcProvider(BSC_RPC);
+          // Minimal ABIs
+          const POOL_ABI = [
+            'function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)',
+            'function token0() view returns (address)',
+            'function token1() view returns (address)',
+            'function fee() view returns (uint24)'
+          ];
+          const ERC20_ABI = [
+            'function decimals() view returns (uint8)',
+            'function symbol() view returns (string)'
+          ];
+          const pool = new ethers.Contract(poolAddress, POOL_ABI, provider);
+          const [slot0, t0, t1, fee] = await Promise.all([
+            pool.slot0(), pool.token0(), pool.token1(), pool.fee()
+          ]);
+          const token0 = new ethers.Contract(t0, ERC20_ABI, provider);
+          const token1 = new ethers.Contract(t1, ERC20_ABI, provider);
+          const [d0, d1, s0, s1] = await Promise.all([
+            token0.decimals(), token1.decimals(), token0.symbol(), token1.symbol()
+          ]);
+          setStatus('BSC: 已获取池与代币信息');
+          return {
+            id: poolAddress,
+            feeTier: Number(fee),
+            token0: { id: t0, decimals: Number(d0), symbol: s0 },
+            token1: { id: t1, decimals: Number(d1), symbol: s1 },
+            tick: Number(slot0.tick)
+          };
+        }
+
+        async function handleQuery(){
+          errorBox.textContent = '';
+          setStatus('');
+          positionsBody.innerHTML = '';
+          renderChart([{label:'-', liquidity:0}]);
+          const addr = addressInput.value.trim();
+          const chain = detectChainByAddress(addr);
+          setChainBadge(chain);
+          if(!chain){ errorBox.textContent = '无法识别链，请输入 0x 开头(BSC) 或 Base58(Solana) 地址'; return; }
+          if(chain === 'sol' && window.location.protocol === 'https:' && LOCAL_PROXY.startsWith('http://')){
+            errorBox.textContent = 'HTTPS页面无法请求 http://localhost 代理。请本地用 http 服务打开页面，或将代理换成HTTPS域名。';
+            return;
+          }
+          // quick health check for proxy (multiple ports)
+          const proxyBase = await pickHealthyProxyBase();
+          if(!proxyBase){
+            errorBox.textContent = '本地代理未启动或不可达：请在 tools/uniswapv3-distribution 目录运行 npm start 启动代理（支持 3001/3002/3011 端口）。';
+            return;
+          }
+          queryBtn.disabled = true;
+          try{
+            if(chain === 'bsc'){
+              const pool = await queryBscPoolViaRpc(addr);
+              const d0 = Number(pool.token0.decimals||0);
+              const d1 = Number(pool.token1.decimals||0);
+              const price = tickToPrice(Number(pool.tick), d0, d1);
+              renderChart([{ label: `当前价格 ${price.toFixed(6)} (${pool.token0.symbol}/${pool.token1.symbol})`, liquidity: 1 }]);
+              renderPositions([]);
+              setStatus('BSC: 查询完成');
+              errorBox.textContent = '提示：未使用DEX子图。完整价格分布与LP仓位需索引器支持。';
+            } else if(chain === 'sol'){
+              const pubkey = new solanaWeb3.PublicKey(addr);
+              let info = null;
+              let lastErr = null;
+              let usedRpc = '';
+              const prefer = (customRpcInput.value||'').trim();
+              const rpcList = prefer ? [prefer, ...SOLANA_RPCS] : SOLANA_RPCS;
+              let timeoutMs = parseInt((timeoutMsInput.value||'').trim(), 10);
+              if(!Number.isFinite(timeoutMs) || timeoutMs <= 0) timeoutMs = 20000;
+              for(const rpc of rpcList){
+                try{
+                  setStatus(`Solana: 通过代理请求 ${rpc} ...`);
+                  const controller = new AbortController();
+                  const timeout = setTimeout(()=>controller.abort(), timeoutMs);
+                  const rpcBody = { jsonrpc: '2.0', id: Date.now(), method: 'getAccountInfo', params: [ pubkey.toBase58(), { encoding: 'base64' } ] };
+                  const resp = await fetch(`${SELECTED_PROXY_BASE||proxyBase}/jsonrpc`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url: rpc, rpcBody }), signal: controller.signal });
+                  clearTimeout(timeout);
+                  if(!resp.ok){ throw new Error(`Proxy HTTP ${resp.status}`); }
+                  const payload = await resp.json();
+                  console.log('Proxy payload', payload);
+                  if(payload && payload.data && payload.data.result && payload.data.result.value){
+                    const val = payload.data.result.value;
+                    info = { owner: new solanaWeb3.PublicKey(val.owner) };
+                    usedRpc = rpc;
+                    setStatus(`Solana: 成功 - 使用 ${rpc}`);
+                    break;
+                  }
+                  if(payload && payload.data && payload.data.error){
+                    throw new Error(payload.data.error.message||'RPC error');
+                  }
+                } catch(e){
+                  lastErr = e;
+                  const reason = e && e.name === 'AbortError' ? `超时(${timeoutMs}ms)` : (e.message||String(e));
+                  console.warn('RPC via proxy failed', rpc, reason);
+                  setStatus(`Solana: ${rpc} 失败 - ${reason}`);
+                }
+              }
+              if(!info){
+                if(lastErr) throw new Error(`Solana RPC调用失败: ${lastErr.message||lastErr}`);
+                throw new Error('未查询到该账户的 on-chain 信息（可能不是有效账户）');
+              }
+              const owner = info.owner?.toBase58?.() || String(info.owner);
+              renderChart([{ label: `账户存在 - 程序: ${owner} (RPC: ${usedRpc})`, liquidity: 1 }]);
+              renderPositions([]);
+              setStatus('Solana: 查询完成');
+              errorBox.textContent = '提示：通过公共RPC获取账户存在性。价格分布与LP仓位需Whirlpools索引器/程序解析。';
+            }
+          } catch(e){
+            errorBox.textContent = e.message || String(e);
+          } finally{
+            queryBtn.disabled = false;
+          }
+        }
+
+        queryBtn.addEventListener('click', handleQuery);
+      })();
+    </script>
+  </body>
+  </html>
+
+

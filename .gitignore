@@ -1,1 +1,2 @@
 demots/node_modules/*
+/tools/uniswapv3-distribution/node_modules
